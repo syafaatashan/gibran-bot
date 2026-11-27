@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# entrypoint.sh - render config MCode dari env lalu jalankan bot (tmux + TTY + auto-restart)
+# entrypoint.sh - render config MCode dari env lalu jalankan bot di pty (script -qfc) + auto-restart
 set -uo pipefail
 
 export MINIMAX_DATA_DIR="${MINIMAX_DATA_DIR:-/root/.minimax}"
@@ -25,18 +25,13 @@ mkdir -p "$WORKSPACE/users"
 chmod 700 "$MINIMAX_DATA_DIR/auth" 2>/dev/null || true
 chmod 600 "$MINIMAX_DATA_DIR/telegram-channel.yaml" 2>/dev/null || true
 
-# streaming: kirim isi bot.log ke stdout container
+# streaming log ke stdout container
 ( tail -n 200 -F "$LOGFILE" & )
 
-# mcode WAJIB jalan tanpa pipe supaya stdout tetap TTY (tmux pane = pty)
+# mcode butuh stdin+stdout TTY -> script mengalokasikan pty untuk child
 while true; do
-  tmux kill-session -t gibran-bot 2>/dev/null || true
-  tmux new-session -d -s gibran-bot -x 200 -y 50 -c "$WORKSPACE" mcode
-  echo "[entrypoint] $(date -Is) mcode start (tmux gibran-bot, TTY native)" | tee -a "$LOGFILE"
-  sleep 20
-  tmux capture-pane -p -t gibran-bot 2>/dev/null | grep -v "^$" | tail -30 | sed "s/^/[pane] /" >> "$LOGFILE"
-  if ! tmux has-session -t gibran-bot 2>/dev/null; then
-    echo "[entrypoint] $(date -Is) mcode mati, restart 10 dtk lagi" | tee -a "$LOGFILE"
-    sleep 10
-  fi
+  echo "[entrypoint] $(date -Is) mcode start via script(pty)" | tee -a "$LOGFILE"
+  script -q -f -c "mcode" "$LOGFILE"
+  echo "[entrypoint] $(date -Is) mcode exit, restart 10 dtk lagi" | tee -a "$LOGFILE"
+  sleep 10
 done

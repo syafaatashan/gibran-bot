@@ -2,7 +2,7 @@
 FROM node:24-bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        tmux ca-certificates curl git procps less \
+        tmux ca-certificates curl git procps less util-linux \
     && rm -rf /var/lib/apt/lists/*
 
 RUN npm install -g @minimax-ai/code@latest && npm cache clean --force
@@ -26,6 +26,6 @@ RUN chmod +x /app/entrypoint.sh \
 
 VOLUME ["/workspace"]
 HEALTHCHECK --interval=60s --timeout=20s --start-period=90s --retries=3 \
-  CMD tmux has-session -t gibran-bot || exit 1
+  CMD pgrep -f "node.*code" >/dev/null || exit 1
 
 ENTRYPOINT ["/app/entrypoint.sh"]
