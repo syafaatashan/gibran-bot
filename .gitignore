@@ -1,0 +1,4 @@
+_prep.py
+*.log
+secrets.yaml
+service.yaml
