@@ -48,7 +48,9 @@ try {
 }
 
 // MCP browser native MCode (chrome-devtools-mcp) - tanpa muse browser.
+const browserMcp = (process.env.BOT_BROWSER_MCP || '0') === '1';
 try {
+  if (!browserMcp) throw new Error('BOT_BROWSER_MCP=0');
   const mcp = {
     mcpServers: {
       'chrome-devtools': {

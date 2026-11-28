@@ -43,7 +43,9 @@ RUN printf '#!/usr/bin/env bash\nexec /usr/bin/chromium --no-sandbox --disable-d
 VOLUME ["/data"]
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=90s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+# Pakai curl, bukan `node -e`: startup node di 0,2 vCPU bisa >10 detik ->
+# healthcheck timeout -> Northflank kill & restart container tiap ~10 menit.
+HEALTHCHECK --interval=30s --timeout=15s --start-period=120s --retries=5 \
+  CMD curl -fsS --max-time 10 http://127.0.0.1:8080/health || exit 1
 
 ENTRYPOINT ["/app/entrypoint.sh"]
