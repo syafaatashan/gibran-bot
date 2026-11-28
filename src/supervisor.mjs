@@ -153,6 +153,15 @@ function readJson(p) {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
 }
 
+function readAuthStoreRecord() {
+  try {
+    const j = JSON.parse(fs.readFileSync(path.join(NS_DIR, 'auth.json'), 'utf8'));
+    const recs = Object.values(j.records || {});
+    return recs.length ? recs[0] : null;
+  } catch {
+    return null;
+  }
+}
 // Pastikan akun aktif punya access token yang valid dan sudah ditulis ke auth store.
 export async function ensureAccount() {
   const acc = currentAccount();
@@ -161,7 +170,20 @@ export async function ensureAccount() {
   }
   const expiresAtMs = Number(acc.expiresAtMs || 0);
   let cred = null;
-  if (acc.accessToken && expiresAtMs - Date.now() > 5 * 60 * 1000) {
+  // Auth store selalu memegang token terbaru untuk akun aktif. Jika chain basi
+  // (mis. setelah refresh di runtime lain), ambil dari sana lalu selaraskan.
+  const storeRec = readAuthStoreRecord();
+  if (storeRec && storeRec.accessToken && Number(storeRec.expiresAtMs || 0) - Date.now() > 5 * 60 * 1000) {
+    cred = {
+      accessToken: storeRec.accessToken,
+      refreshToken: storeRec.refreshToken,
+      expiresAtMs: Number(storeRec.expiresAtMs),
+      generation: storeRec.generation || 1,
+    };
+    acc.accessToken = cred.accessToken;
+    acc.refreshToken = cred.refreshToken;
+    acc.expiresAtMs = cred.expiresAtMs;
+  } else if (acc.accessToken && expiresAtMs - Date.now() > 5 * 60 * 1000) {
     cred = { accessToken: acc.accessToken, refreshToken: acc.refreshToken, expiresAtMs, generation: acc.generation || 1 };
   } else if (acc.refreshToken) {
     log('refresh OAuth untuk akun ' + (acc.label || acc.email));
