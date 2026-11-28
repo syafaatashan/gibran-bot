@@ -123,11 +123,19 @@ export async function rotateRobust(targetIndex) {
   const start = (typeof targetIndex === 'number' && targetIndex >= 0)
     ? targetIndex % n
     : (pool.currentIndex + 1 + n) % n;
+  let scanned = 0;
   for (let i = 0; i < n; i++) {
     const idx = (start + i) % n;
     const acc = pool.accounts[idx];
     if (!acc || acc.dead) continue;
     const label = acc.label || acc.email;
+    scanned++;
+    if (scanned % 25 === 0) log('memindai kredit akun: ' + scanned + ' (' + label + ')');
+    // Batas pindai: jangan sampai giliran bot menggantung lama.
+    if (scanned > 200) {
+      log('pindai rotasi dihentikan setelah ' + scanned + ' akun');
+      break;
+    }
     try {
       const c = await pool.credit(label);
       if (c.remaining > 0) {

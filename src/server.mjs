@@ -2,9 +2,9 @@ import http from 'node:http';
 import path from 'node:path';
 import { CFG } from './config.mjs';
 import { state, saveStore, getSession, setSession } from './store.mjs';
-import { log } from './log.mjs';
+import { log, recentLogs } from './log.mjs';
 import {
-  ensureAccount, handleCreditExhausted, chainLabels, currentAccount,
+  pool, ensureAccount, handleCreditExhausted, chainLabels, currentAccount,
   rotate, rotateRobust, creditSummary, signinStatus, claimCheckin, importChainFromEnv, mergeChainFromBody,
   leaseForChat, setChatLease, clearChatLease, migrateChatContext, tokenForLabel, agentIdForLabel,
   armFault, clearFault, faultFor,
@@ -475,6 +475,35 @@ const server = http.createServer((req, res) => {
       })();
     });
     return undefined;
+  }
+
+  // Log internal container (ring buffer) --gunanya untuk diagnosa saat live.
+  if (req.method === 'GET' && p === '/ops/logs') {
+    if (!opsOk(req)) return send(res, 401, { ok: false, error: 'token ops salah' });
+    return send(res, 200, { ok: true, lines: recentLogs(url.searchParams.get('limit')) });
+  }
+
+  // Kesehatan pool akun: berapa yang mati / kedaluwarsa / punya token valid.
+  if (req.method === 'GET' && p === '/ops/pool') {
+    if (!opsOk(req)) return send(res, 401, { ok: false, error: 'token ops salah' });
+    const now = Date.now();
+    let dead = 0; let expired = 0; let valid = 0; let noToken = 0;
+    for (const a of pool.accounts) {
+      if (!a) continue;
+      if (a.dead) { dead++; continue; }
+      const exp = Number(a.expiresAtMs || 0);
+      if (!a.accessToken) noToken++;
+      else if (exp && exp - now > 5 * 60 * 1000) valid++;
+      else expired++;
+    }
+    return send(res, 200, {
+      ok: true,
+      total: pool.accounts.length,
+      dead, expired, valid, noToken,
+      currentIndex: pool.currentIndex,
+      currentLabel: state.accounts.currentLabel,
+      leaseCount: pool.leaseCount(),
+    });
   }
 
   // Diagnostik egress: cek host yang dipakai bot (cloud API + OAuth).
