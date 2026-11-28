@@ -197,7 +197,14 @@ export function leaseForChat(chatId) {
 }
 
 export function setChatLease(chatId, info) {
-  setSession(chatId, info);
+  const prev = getSession(chatId) || {};
+  const next = Object.assign({}, info);
+  // Sesi baru = pemilik baru. Owner lama tidak berlaku lagi, jadi jangan
+  // dibawa (bisa membuat ekspor histori memakai token akun yang salah).
+  if (next.sessionId && prev.sessionId && next.sessionId !== prev.sessionId && !('owner' in next)) {
+    next.owner = '';
+  }
+  setSession(chatId, next);
 }
 
 export function clearChatLease(chatId) {
@@ -212,13 +219,31 @@ export async function migrateChatContext(chatId, oldLabel, newLabel, userText, c
   // Ekspor histori WAJIB pakai token akun PEMILIK sesi. Kalau label lease
   // menyimpang dari owner (mis. lease dipaksa pindah akun), owner yang benar.
   const owner = lease.owner || oldLabel;
-  const r = await migrator.migrateViaHistory({
-    sessionId: lease.sessionId,
-    oldLabel: owner,
-    newLabel,
-    userText,
-    contextBundle,
-  });
+  let r;
+  try {
+    r = await migrator.migrateViaHistory({
+      sessionId: lease.sessionId,
+      oldLabel: owner,
+      newLabel,
+      userText,
+      contextBundle,
+    });
+  } catch (e) {
+    // Owner yang tercatat ternyata bukan pemilik sesi: coba pakai label yang
+    // dipakai untuk post (fallback terakhir sebelum menyerah).
+    if (e && e.kind === ERR.OWNERSHIP && owner !== oldLabel) {
+      log('ekspor dari owner ' + owner + ' ditolak -> fallback ke ' + oldLabel);
+      r = await migrator.migrateViaHistory({
+        sessionId: lease.sessionId,
+        oldLabel,
+        newLabel,
+        userText,
+        contextBundle,
+      });
+    } else {
+      throw e;
+    }
+  }
   setChatLease(chatId, { label: newLabel, sessionId: r.newSessionId, agentId: '', owner: newLabel, migrated: true });
   return r;
 }
