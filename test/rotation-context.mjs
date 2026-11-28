@@ -90,7 +90,8 @@ await sleep(1500);
 
 const BASE = 'http://127.0.0.1:18099';
 const H = { 'content-type': 'application/json', 'x-ops-token': 'test-ops-token' };
-const CHAT = '777000111';
+// Chat id unik per eksekusi + lease dibersihkan, supaya tidak membaca state run lama.
+const CHAT = '777' + Math.floor(Math.random() * 1000000);
 
 const st0 = await (await fetch(BASE + '/ops/state', { headers: H })).json();
 check('RC7 server hidup dalam mode cloud-agent', st0.mode === 'cloud-agent',
@@ -112,20 +113,23 @@ async function sendTurn(text) {
     }),
   });
 }
-async function waitLease(pred, ms) {
+async function waitLease(pred, ms, since) {
   const t0 = Date.now();
   while (Date.now() - t0 < ms) {
     const j = await (await fetch(BASE + '/ops/state', { headers: H })).json();
     const s = j.sessions && j.sessions[CHAT];
-    if (s && pred(s)) return s;
+    const fresh = s && (!since || Number(s.lastReplyAt || 0) >= since);
+    if (fresh && pred(s)) return s;
     await sleep(1500);
   }
   return null;
 }
 
 const marker2 = 'KONTEKS' + Math.floor(Math.random() * 100000) + 'XYZ';
+await fetch(BASE + '/ops/lease', { method: 'POST', headers: H, body: JSON.stringify({ chatId: CHAT, clear: true }) });
+const t1 = Date.now();
 await sendTurn('Simpan kode ini untuk pengujian: ' + marker2);
-const s1 = await waitLease((s) => !!s.lastReplyAt, 300000);
+const s1 = await waitLease((s) => !!s.lastReplyAt, 300000, t1);
 check('RC8 turn normal selesai di akun awal', !!s1 && s1.lastPath === 'direct',
   s1 ? (s1.label + ' | ' + s1.lastPath + ' | ' + String(s1.lastReply || '').slice(0, 110)) : 'timeout');
 await sleep(2500);
@@ -138,8 +142,9 @@ check('RC9 hook /ops/lease menyalakan fault kredit', armed.fault === 'credit',
   'fault=' + armed.fault + ' pool=' + armed.poolCurrent);
 
 const labelBefore = s1 && s1.label;
+const t2 = Date.now();
 await sendTurn('Sebutkan kembali kode yang tadi saya minta kamu simpan.');
-const s2 = await waitLease((s) => s.lastPath === 'migrated', 420000);
+const s2 = await waitLease((s) => s.lastPath === 'migrated', 420000, t2);
 check('RC10 rotasi + migrasi dijalankan', !!s2,
   s2 ? (labelBefore + ' -> ' + s2.label + ' | sesi ' + s2.sessionId) : 'timeout');
 check('RC11 akun benar-benar berubah', !!s2 && !!labelBefore && s2.label !== labelBefore,

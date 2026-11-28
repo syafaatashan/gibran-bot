@@ -189,10 +189,12 @@ async function handleCloudAgent(msg) {
       const kind = e && e.kind;
       if (kind !== ERR.OWNERSHIP && kind !== ERR.CREDIT && kind !== ERR.AUTH) throw e;
       log('turn gagal (' + kind + ') -> check-in / rotasi / migrasi konteks');
+      let rotatedLabel = '';
       // a) kredit habis -> klaim check-in harian lalu ulangi di akun yang sama
       if (kind === ERR.CREDIT) {
         const act = await handleCreditExhausted();
         log('supervisor: ' + act.action + (act.label ? ' -> ' + act.label : ''));
+        if (act.action === 'rotated') rotatedLabel = act.label;
         if (act.action === 'claimed') {
           try {
             const token = await tokenForLabel(label);
@@ -203,7 +205,9 @@ async function handleCloudAgent(msg) {
       }
       // b) masih gagal -> rotasi akun + pindahkan konteks (export -> sesi baru -> inject)
       if (!reply) {
-        const next = await rotateRobust();
+        // Kalau rotasi sudah dilakukan di atas (kredit habis), pakai akun itu
+        // sebagai target migrasi - jangan rotasi lagi, satu akun jadi terbuang.
+        const next = rotatedLabel ? { label: rotatedLabel } : await rotateRobust();
         const r = await migrateChatContext(key, label, next.label, content, CONTEXT);
         reply = (r && r.reply) || '';
         path = 'migrated';
