@@ -971,6 +971,20 @@ server.listen(CFG.port, '0.0.0.0', async () => {
   } catch (e) {
     log('gagal daftar perintah: ' + String((e && e.message) || e).slice(0, 120));
   }
+  // Webhook harus mengizinkan callback_query, kalau tidak tombol tidak pernah
+  // sampai ke bot. Daftar ulang kalau allowed_updates masih kurang.
+  try {
+    const info = await getWebhookInfo();
+    const allowed = (info && info.allowed_updates) || [];
+    if (!allowed.includes('callback_query')) {
+      await setWebhook(CFG.publicUrl + CFG.telegram.webhookPath, CFG.telegram.webhookSecret);
+      log('webhook didaftarkan ulang dengan callback_query');
+    } else {
+      log('webhook sudah menerima callback_query');
+    }
+  } catch (e) {
+    log('gagal cek webhook: ' + String((e && e.message) || e).slice(0, 140));
+  }
   if (CFG.mode === 'runtime-local') {
     try {
       const acc = await ensureAccount();

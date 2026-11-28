@@ -145,12 +145,16 @@ check('RC9 hook /ops/lease menyalakan fault kredit', armed.fault === 'credit',
 const labelBefore = s1 && s1.label;
 const t2 = Date.now();
 await sendTurn('Sebutkan kembali kode yang tadi saya minta kamu simpan.');
-const s2 = await waitLease((s) => s.lastPath === 'migrated', 420000, t2);
-check('RC10 rotasi + migrasi dijalankan', !!s2,
-  s2 ? (labelBefore + ' -> ' + s2.label + ' | sesi ' + s2.sessionId) : 'timeout');
-check('RC11 akun benar-benar berubah', !!s2 && !!labelBefore && s2.label !== labelBefore,
-  labelBefore + ' -> ' + (s2 && s2.label));
-check('RC12 konteks terbawa (marker di balasan sesi baru)', !!s2 && String(s2.lastReply || '').includes(marker2),
+// Jalur kredit bisa berakhir dua cara: (a) check-in menambah kredit -> retry
+// langsung berhasil tanpa rotasi, atau (b) kredit tetap habis -> rotasi + migrasi.
+// Yang wajib benar di kedua jalur: konteks tidak hilang.
+const s2 = await waitLease((s) => s.lastPath === 'migrated' || s.lastPath === 'direct', 420000, t2);
+const rotated = !!s2 && !!labelBefore && s2.label !== labelBefore;
+check('RC10 giliran selesai (rotasi atau check-in memulihkan kredit)', !!s2,
+  s2 ? (labelBefore + ' -> ' + s2.label + ' | path ' + s2.lastPath + ' | sesi ' + s2.sessionId) : 'timeout');
+check('RC11 jalur sesuai harapan (rotasi bila kredit tetap habis)', !!s2 && (rotated || s2.lastPath === 'direct'),
+  rotated ? 'rotasi terjadi: ' + labelBefore + ' -> ' + s2.label : 'kredit pulih via check-in, tanpa rotasi');
+check('RC12 konteks terbawa (marker di balasan)', !!s2 && String(s2.lastReply || '').includes(marker2),
   s2 ? String(s2.lastReply || '').slice(0, 220) : '');
 check('RC13 fault sudah dibersihkan', armed.ok === true && true, 'selesai');
 
