@@ -66,7 +66,8 @@ function chatByToken(token) {
 }
 
 function liveUrlFor(chatId) {
-  return CFG.publicUrl + '/browser/view?token=' + encodeURIComponent(viewTokenFor(chatId));
+  const base = CFG.publicUrl ? CFG.publicUrl : '';
+  return base + '/browser/view?token=' + encodeURIComponent(viewTokenFor(chatId));
 }
 
 // Kirim berkas baru dari drive ke user (foto/dokumen).
@@ -977,8 +978,12 @@ server.listen(CFG.port, '0.0.0.0', async () => {
     const info = await getWebhookInfo();
     const allowed = (info && info.allowed_updates) || [];
     if (!allowed.includes('callback_query')) {
-      await setWebhook(CFG.publicUrl + CFG.telegram.webhookPath, CFG.telegram.webhookSecret);
-      log('webhook didaftarkan ulang dengan callback_query');
+      if (!CFG.publicUrl) {
+        log('PUBLIC_BASE_URL kosong -> webhook tidak didaftarkan ulang');
+      } else {
+        await setWebhook(CFG.publicUrl + CFG.telegram.webhookPath, CFG.telegram.webhookSecret);
+        log('webhook didaftarkan ulang dengan callback_query');
+      }
     } else {
       log('webhook sudah menerima callback_query');
     }

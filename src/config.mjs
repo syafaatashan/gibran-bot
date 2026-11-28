@@ -4,6 +4,7 @@ export const CFG = {
   dataDir: process.env.MINIMAX_DATA_DIR || process.env.BOT_DATA_DIR || '/data',
   workspaceDir: process.env.BOT_WORKSPACE_DIR || '/workspace',
   opsToken: process.env.OPS_TOKEN || '',
+  publicUrl: (process.env.PUBLIC_BASE_URL || '').replace(/\/+$/, ''),
   mcodeBin: process.env.MCODE_BIN || 'mcode',
   mcodeModel: process.env.MCODE_MODEL || '',
   mcodePermission: process.env.MCODE_PERMISSION || 'smart',
