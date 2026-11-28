@@ -1,0 +1,250 @@
+2026-11-28T15:11:17.56933515Z stdout F [2026-11-28T15:11:17.568Z] update diterima, message=false callback=true
+2026-11-28T15:11:17.569306983Z stdout F [2026-11-28T15:11:17.568Z] webhook masuk: 1460 byte, parse=ok, adaMessage=false
+2026-11-28T15:10:38.920028898Z stdout F [2026-11-28T15:10:38.919Z] update diterima, message=true callback=false
+2026-11-28T15:10:38.92000821Z stdout F [2026-11-28T15:10:38.919Z] webhook masuk: 360 byte, parse=ok, adaMessage=true
+2026-11-28T15:08:53.092079794Z stdout F [2026-11-28T15:08:53.090Z] update diterima, message=true callback=false
+2026-11-28T15:08:53.09103233Z stdout F [2026-11-28T15:08:53.090Z] webhook masuk: 360 byte, parse=ok, adaMessage=true
+2026-11-28T15:08:52.312949795Z stdout F [2026-11-28T15:08:52.311Z] sesi tidak idle -> sesi baru 468276018557270 di Account 2034 (50 pesan, brief 6406 char)
+2026-11-28T15:08:52.311416862Z stdout F [2026-11-28T15:08:52.310Z] migrasiViaHistory: Account 2034 -> Account 2034 | ekspor 50 pesan | brief 6406 char | sesi baru 468276018557270
+2026-11-28T15:07:34.661044431Z stdout F [2026-11-28T15:07:34.660Z] turn gagal (session_not_idle) -> check-in / rotasi / migrasi konteks
+2026-11-28T15:07:33.558282484Z stdout F [2026-11-28T15:07:33.557Z] update diterima, message=false callback=true
+2026-11-28T15:07:33.558255133Z stdout F [2026-11-28T15:07:33.557Z] webhook masuk: 1860 byte, parse=ok, adaMessage=false
+2026-11-28T15:06:59.557518958Z stdout F [2026-11-28T15:06:59.557Z] update diterima, message=false callback=true
+2026-11-28T15:06:59.557494115Z stdout F [2026-11-28T15:06:59.557Z] webhook masuk: 783 byte, parse=ok, adaMessage=false
+2026-11-28T15:06:29.820134539Z stdout F [2026-11-28T15:06:29.818Z] update diterima, message=false callback=true
+2026-11-28T15:06:29.82011043Z stdout F [2026-11-28T15:06:29.818Z] webhook masuk: 832 byte, parse=ok, adaMessage=false
+2026-11-28T15:05:57.425490244Z stdout F [2026-11-28T15:05:57.370Z] update diterima, message=true callback=false
+2026-11-28T15:05:57.425462232Z stdout F [2026-11-28T15:05:57.359Z] webhook masuk: 358 byte, parse=ok, adaMessage=true
+2026-11-28T15:05:56.073839826Z stdout F [2026-11-28T15:05:56.065Z] webhook siap: callback_query aktif dan URL cocok
+2026-11-28T15:05:55.754064461Z stdout F [2026-11-28T15:05:55.745Z] perintah bot didaftarkan: 10
+2026-11-28T15:05:55.17071195Z stdout F [2026-11-28T15:05:55.162Z] konteks dimuat: 20347 karakter | chain akun: 1365
+2026-11-28T15:05:55.170392492Z stdout F [2026-11-28T15:05:55.162Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T15:05:55.139339255Z stdout F [2026-11-28T15:05:55.130Z] rotasi dilanjutkan dari index 51 (Account 2034)
+2026-11-28T15:05:55.138875816Z stdout F [2026-11-28T15:05:55.051Z] pool dimuat: 1365 akun
+2026-11-28T15:05:54.76375086Z stdout F [entrypoint] mode=cloud-agent data=/data port=8080
+2026-11-28T15:05:54.762009684Z stdout F [render] data dir siap: /data
+2026-11-28T15:05:54.761988591Z stdout F [render] gagal tulis mcp.json: BOT_BROWSER_MCP=0
+2026-11-28T15:05:54.760705595Z stdout F [render] config.yaml ditulis
+2026-11-28T15:05:54.759709054Z stdout F [render] skill get-a-job: true | agent gibran-ai: true
+2026-11-28T15:05:54.263070573Z stdout F [2026-11-28T15:05:54Z INFO ] Starting container entrypoint...
+2026-11-28T15:05:54.263054771Z stdout F [2026-11-28T15:05:54Z INFO ] Successfully fetched environment variables
+2026-11-28T15:05:53.772497811Z stdout F [2026-11-28T15:05:53Z INFO ] Securely fetching environment variables
+2026-11-28T15:05:15.430941465Z stdout F [2026-11-28T15:05:15Z INFO ] Process terminated with exit code 0
+2026-11-28T15:05:15.421789234Z stdout F [2026-11-28T15:05:15.420Z] SIGTERM, keluar
+2026-11-28T15:05:07.395811484Z stdout F [2026-11-28T15:05:07.395Z] callback tidak dikenal: gibran:mode
+2026-11-28T15:05:06.909650393Z stdout F [2026-11-28T15:05:06.909Z] update diterima, message=false callback=true
+2026-11-28T15:05:06.909624336Z stdout F [2026-11-28T15:05:06.909Z] webhook masuk: 1858 byte, parse=ok, adaMessage=false
+2026-11-28T15:04:57.495412382Z stdout F [2026-11-28T15:04:57.495Z] handleUpdate error: fetch failed
+2026-11-28T15:04:19.542391371Z stdout F [2026-11-28T15:04:19.541Z] callback tidak dikenal: gibran:mode
+2026-11-28T15:04:19.041291233Z stdout F [2026-11-28T15:04:19.040Z] update diterima, message=false callback=true
+2026-11-28T15:04:19.041248475Z stdout F [2026-11-28T15:04:19.040Z] webhook masuk: 1858 byte, parse=ok, adaMessage=false
+2026-11-28T15:03:12.657432062Z stdout F [2026-11-28T15:03:12.655Z] update diterima, message=false callback=true
+2026-11-28T15:03:12.657400619Z stdout F [2026-11-28T15:03:12.654Z] webhook masuk: 1861 byte, parse=ok, adaMessage=false
+2026-11-28T14:59:56.227815305Z stdout F [2026-11-28T14:59:56.227Z] update diterima, message=false callback=true
+2026-11-28T14:59:56.227785625Z stdout F [2026-11-28T14:59:56.227Z] webhook masuk: 1858 byte, parse=ok, adaMessage=false
+2026-11-28T14:59:50.535455397Z stdout F [2026-11-28T14:59:50.535Z] update diterima, message=true callback=false
+2026-11-28T14:59:50.535420305Z stdout F [2026-11-28T14:59:50.534Z] webhook masuk: 358 byte, parse=ok, adaMessage=true
+2026-11-28T14:59:16.6094918Z stdout F [2026-11-28T14:59:16.608Z] update diterima, message=true callback=false
+2026-11-28T14:59:16.609070884Z stdout F [2026-11-28T14:59:16.608Z] webhook masuk: 361 byte, parse=ok, adaMessage=true
+2026-11-28T14:58:20.510748287Z stdout F [2026-11-28T14:58:20.500Z] webhook siap: callback_query aktif dan URL cocok
+2026-11-28T14:58:20.180580635Z stdout F [2026-11-28T14:58:20.170Z] perintah bot didaftarkan: 10
+2026-11-28T14:58:19.721448662Z stdout F [2026-11-28T14:58:19.573Z] konteks dimuat: 20347 karakter | chain akun: 1365
+2026-11-28T14:58:19.582798507Z stdout F [2026-11-28T14:58:19.572Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T14:58:19.498976583Z stdout F [2026-11-28T14:58:19.488Z] rotasi dilanjutkan dari index 51 (Account 2034)
+2026-11-28T14:58:19.497730616Z stdout F [2026-11-28T14:58:19.483Z] pool dimuat: 1365 akun
+2026-11-28T14:58:19.07150739Z stdout F [entrypoint] mode=cloud-agent data=/data port=8080
+2026-11-28T14:58:19.007254844Z stdout F [render] data dir siap: /data
+2026-11-28T14:58:19.007253191Z stdout F [render] gagal tulis mcp.json: BOT_BROWSER_MCP=0
+2026-11-28T14:58:19.007239602Z stdout F [render] config.yaml ditulis
+2026-11-28T14:58:18.999985855Z stdout F [render] skill get-a-job: true | agent gibran-ai: true
+2026-11-28T14:58:18.571331409Z stdout F [2026-11-28T14:58:18Z INFO ] Starting container entrypoint...
+2026-11-28T14:58:18.569668635Z stdout F [2026-11-28T14:58:18Z INFO ] Successfully fetched environment variables
+2026-11-28T14:58:18.0727735Z stdout F [2026-11-28T14:58:18Z INFO ] Securely fetching environment variables
+2026-11-28T14:57:42.528819198Z stdout F [2026-11-28T14:57:42Z INFO ] Process terminated with exit code 0
+2026-11-28T14:57:42.519134242Z stdout F [2026-11-28T14:57:42.518Z] SIGTERM, keluar
+2026-11-28T14:54:40.219138149Z stdout F [2026-11-28T14:54:40.218Z] update diterima, message=false callback=true
+2026-11-28T14:54:40.218671448Z stdout F [2026-11-28T14:54:40.218Z] webhook masuk: 1861 byte, parse=ok, adaMessage=false
+2026-11-28T14:54:40.10622538Z stdout F [2026-11-28T14:54:40.104Z] update diterima, message=true callback=false
+2026-11-28T14:54:40.106197962Z stdout F [2026-11-28T14:54:40.104Z] webhook masuk: 361 byte, parse=ok, adaMessage=true
+2026-11-28T14:52:12.364306038Z stdout F [2026-11-28T14:52:12.350Z] webhook sudah menerima callback_query
+2026-11-28T14:52:11.988228508Z stdout F [2026-11-28T14:52:11.973Z] perintah bot didaftarkan: 10
+2026-11-28T14:52:11.379309525Z stdout F [2026-11-28T14:52:11.365Z] konteks dimuat: 20347 karakter | chain akun: 1365
+2026-11-28T14:52:11.378874774Z stdout F [2026-11-28T14:52:11.364Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T14:52:11.31014671Z stdout F [2026-11-28T14:52:11.296Z] rotasi dilanjutkan dari index 51 (Account 2034)
+2026-11-28T14:52:11.309340339Z stdout F [2026-11-28T14:52:11.269Z] pool dimuat: 1365 akun
+2026-11-28T14:52:10.482841582Z stdout F [entrypoint] mode=cloud-agent data=/data port=8080
+2026-11-28T14:52:10.477628759Z stdout F [render] data dir siap: /data
+2026-11-28T14:52:10.477290706Z stdout F [render] gagal tulis mcp.json: BOT_BROWSER_MCP=0
+2026-11-28T14:52:10.476665117Z stdout F [render] config.yaml ditulis
+2026-11-28T14:52:10.474884444Z stdout F [render] skill get-a-job: true | agent gibran-ai: true
+2026-11-28T14:52:09.076598435Z stdout F [2026-11-28T14:52:09Z INFO ] Starting container entrypoint...
+2026-11-28T14:52:09.074607982Z stdout F [2026-11-28T14:52:09Z INFO ] Successfully fetched environment variables
+2026-11-28T14:52:08.58951249Z stdout F [2026-11-28T14:52:08Z INFO ] Securely fetching environment variables
+2026-11-28T14:51:27.117500525Z stdout F [2026-11-28T14:51:27Z INFO ] Process terminated with exit code 0
+2026-11-28T14:51:27.096517216Z stdout F [2026-11-28T14:51:27.093Z] SIGTERM, keluar
+2026-11-28T14:48:32.341162023Z stdout F [2026-11-28T14:48:32.328Z] gagal cek webhook: setWebhook gagal: {"ok":false,"error_code":400,"description":"Bad Request: bad webhook: Failed to resolve host: Name or service not known"}
+2026-11-28T14:48:31.900387082Z stdout F [2026-11-28T14:48:31.887Z] perintah bot didaftarkan: 10
+2026-11-28T14:48:31.238449185Z stdout F [2026-11-28T14:48:31.225Z] konteks dimuat: 20347 karakter | chain akun: 1365
+2026-11-28T14:48:31.238436482Z stdout F [2026-11-28T14:48:31.225Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T14:48:31.168101612Z stdout F [2026-11-28T14:48:31.154Z] rotasi dilanjutkan dari index 51 (Account 2034)
+2026-11-28T14:48:31.166156709Z stdout F [2026-11-28T14:48:31.135Z] pool dimuat: 1365 akun
+2026-11-28T14:48:30.648375149Z stdout F [entrypoint] mode=cloud-agent data=/data port=8080
+2026-11-28T14:48:30.646486511Z stdout F [render] data dir siap: /data
+2026-11-28T14:48:30.646133322Z stdout F [render] gagal tulis mcp.json: BOT_BROWSER_MCP=0
+2026-11-28T14:48:30.644770982Z stdout F [render] config.yaml ditulis
+2026-11-28T14:48:30.643297012Z stdout F [render] skill get-a-job: true | agent gibran-ai: true
+2026-11-28T14:48:30.128762014Z stdout F [2026-11-28T14:48:30Z INFO ] Starting container entrypoint...
+2026-11-28T14:48:30.125910752Z stdout F [2026-11-28T14:48:30Z INFO ] Successfully fetched environment variables
+2026-11-28T14:48:29.630969446Z stdout F [2026-11-28T14:48:29Z INFO ] Securely fetching environment variables
+2026-11-28T14:47:50.721349899Z stdout F [2026-11-28T14:47:50Z INFO ] Process terminated with exit code 0
+2026-11-28T14:47:50.716313444Z stdout F [2026-11-28T14:47:50.716Z] SIGTERM, keluar
+2026-11-28T14:42:53.497493796Z stdout F [2026-11-28T14:42:53.494Z] update diterima, message=true callback=false
+2026-11-28T14:42:53.496535083Z stdout F [2026-11-28T14:42:53.494Z] webhook masuk: 358 byte, parse=ok, adaMessage=true
+2026-11-28T14:41:04.990655434Z stdout F [2026-11-28T14:41:04.982Z] perintah bot didaftarkan: 10
+2026-11-28T14:41:04.458393041Z stdout F [2026-11-28T14:41:04.448Z] konteks dimuat: 20347 karakter | chain akun: 1365
+2026-11-28T14:41:04.456239174Z stdout F [2026-11-28T14:41:04.448Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T14:41:04.422395211Z stdout F [2026-11-28T14:41:04.413Z] rotasi dilanjutkan dari index 51 (Account 2034)
+2026-11-28T14:41:04.4209009Z stdout F [2026-11-28T14:41:04.381Z] pool dimuat: 1365 akun
+2026-11-28T14:41:03.985299294Z stdout F [entrypoint] mode=cloud-agent data=/data port=8080
+2026-11-28T14:41:03.982770628Z stdout F [render] data dir siap: /data
+2026-11-28T14:41:03.982765625Z stdout F [render] gagal tulis mcp.json: BOT_BROWSER_MCP=0
+2026-11-28T14:41:03.982392822Z stdout F [render] config.yaml ditulis
+2026-11-28T14:41:03.980412924Z stdout F [render] skill get-a-job: true | agent gibran-ai: true
+2026-11-28T14:41:03.478488387Z stdout F [2026-11-28T14:41:03Z INFO ] Starting container entrypoint...
+2026-11-28T14:41:03.476596841Z stdout F [2026-11-28T14:41:03Z INFO ] Successfully fetched environment variables
+2026-11-28T14:41:02.984096904Z stdout F [2026-11-28T14:41:02Z INFO ] Securely fetching environment variables
+2026-11-28T14:40:22.433858925Z stdout F [2026-11-28T14:40:22Z INFO ] Process terminated with exit code 0
+2026-11-28T14:40:22.425741685Z stdout F [2026-11-28T14:40:22.424Z] SIGTERM, keluar
+2026-11-28T14:39:11.935353881Z stdout F [2026-11-28T14:39:11.926Z] perintah bot didaftarkan: 10
+2026-11-28T14:39:11.32081008Z stdout F [2026-11-28T14:39:11.310Z] konteks dimuat: 20347 karakter | chain akun: 1365
+2026-11-28T14:39:11.320796029Z stdout F [2026-11-28T14:39:11.309Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T14:39:10.970357574Z stdout F [2026-11-28T14:39:10.958Z] rotasi dilanjutkan dari index 51 (Account 2034)
+2026-11-28T14:39:10.966953468Z stdout F [2026-11-28T14:39:10.922Z] pool dimuat: 1365 akun
+2026-11-28T14:39:10.22390133Z stdout F [entrypoint] mode=cloud-agent data=/data port=8080
+2026-11-28T14:39:10.219127828Z stdout F [render] data dir siap: /data
+2026-11-28T14:39:10.219116871Z stdout F [render] gagal tulis mcp.json: BOT_BROWSER_MCP=0
+2026-11-28T14:39:10.218586199Z stdout F [render] config.yaml ditulis
+2026-11-28T14:39:10.215464579Z stdout F [render] skill get-a-job: true | agent gibran-ai: true
+2026-11-28T14:39:09.166660643Z stdout F [2026-11-28T14:39:09Z INFO ] Starting container entrypoint...
+2026-11-28T14:39:09.1666459Z stdout F [2026-11-28T14:39:09Z INFO ] Successfully fetched environment variables
+2026-11-28T14:39:08.669328853Z stdout F [2026-11-28T14:39:08Z INFO ] Securely fetching environment variables
+2026-11-28T14:38:30.182841962Z stdout F [2026-11-28T14:38:30Z INFO ] Process terminated with exit code 0
+2026-11-28T14:38:30.173805537Z stdout F [2026-11-28T14:38:30.173Z] SIGTERM, keluar
+2026-11-28T14:25:35.59208832Z stdout F [2026-11-28T14:25:35.591Z] update diterima, message=true
+2026-11-28T14:25:35.591246147Z stdout F [2026-11-28T14:25:35.590Z] webhook masuk: 297 byte, parse=ok, adaMessage=true
+2026-11-28T13:26:12.777876606Z stdout F [2026-11-28T13:26:12.777Z] sesi tidak idle -> sesi baru 468248515559787 di Account 2034 (34 pesan, brief 6406 char)
+2026-11-28T13:26:12.777853035Z stdout F [2026-11-28T13:26:12.776Z] migrasiViaHistory: Account 2034 -> Account 2034 | ekspor 34 pesan | brief 6406 char | sesi baru 468248515559787
+2026-11-28T13:22:33.66810546Z stdout F [2026-11-28T13:22:33.667Z] update diterima, message=true
+2026-11-28T13:22:33.668077634Z stdout F [2026-11-28T13:22:33.667Z] webhook masuk: 306 byte, parse=ok, adaMessage=true
+2026-11-28T13:22:25.744909082Z stdout F [2026-11-28T13:22:25.744Z] update diterima, message=true
+2026-11-28T13:22:25.744887062Z stdout F [2026-11-28T13:22:25.744Z] webhook masuk: 315 byte, parse=ok, adaMessage=true
+2026-11-28T13:21:55.009819875Z stdout F [2026-11-28T13:21:55.007Z] turn gagal (session_not_idle) -> check-in / rotasi / migrasi konteks
+2026-11-28T13:21:54.536826285Z stdout F [2026-11-28T13:21:54.536Z] update diterima, message=true
+2026-11-28T13:21:54.536802867Z stdout F [2026-11-28T13:21:54.536Z] webhook masuk: 305 byte, parse=ok, adaMessage=true
+2026-11-28T13:21:27.486421758Z stdout F [2026-11-28T13:21:27.485Z] ERROR cloud chat 6473032931: fetch failed
+2026-11-28T13:16:26.711798347Z stdout F [2026-11-28T13:16:26.709Z] update diterima, message=true
+2026-11-28T13:16:26.709789286Z stdout F [2026-11-28T13:16:26.709Z] webhook masuk: 347 byte, parse=ok, adaMessage=true
+2026-11-28T13:10:15.723398092Z stdout F [2026-11-28T13:10:15.722Z] update diterima, message=true
+2026-11-28T13:10:15.723372625Z stdout F [2026-11-28T13:10:15.722Z] webhook masuk: 328 byte, parse=ok, adaMessage=true
+2026-11-28T11:14:30.559470305Z stdout F [2026-11-28T11:14:30.557Z] update diterima, message=true
+2026-11-28T11:14:30.559445762Z stdout F [2026-11-28T11:14:30.557Z] webhook masuk: 358 byte, parse=ok, adaMessage=true
+2026-11-28T11:14:12.760955433Z stdout F [2026-11-28T11:14:12.759Z] update diterima, message=true
+2026-11-28T11:14:12.75962777Z stdout F [2026-11-28T11:14:12.759Z] webhook masuk: 326 byte, parse=ok, adaMessage=true
+2026-11-28T11:13:46.159730554Z stdout F [2026-11-28T11:13:46.156Z] update diterima, message=true
+2026-11-28T11:13:46.159706813Z stdout F [2026-11-28T11:13:46.156Z] webhook masuk: 310 byte, parse=ok, adaMessage=true
+2026-11-28T11:13:32.696914499Z stdout F [2026-11-28T11:13:32.696Z] update diterima, message=true
+2026-11-28T11:13:32.696890494Z stdout F [2026-11-28T11:13:32.695Z] webhook masuk: 297 byte, parse=ok, adaMessage=true
+2026-11-28T10:40:41.670681136Z stdout F [2026-11-28T10:40:41.660Z] konteks dimuat: 17821 karakter | chain akun: 1365
+2026-11-28T10:40:41.67066016Z stdout F [2026-11-28T10:40:41.660Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T10:40:41.59929628Z stdout F [2026-11-28T10:40:41.589Z] rotasi dilanjutkan dari index 51 (Account 2034)
+2026-11-28T10:40:41.598714413Z stdout F [2026-11-28T10:40:41.561Z] pool dimuat: 1365 akun
+2026-11-28T10:40:40.884120595Z stdout F [entrypoint] mode=cloud-agent data=/data port=8080
+2026-11-28T10:40:40.879590881Z stdout F [render] data dir siap: /data
+2026-11-28T10:40:40.879397155Z stdout F [render] gagal tulis mcp.json: BOT_BROWSER_MCP=0
+2026-11-28T10:40:40.87882895Z stdout F [render] config.yaml ditulis
+2026-11-28T10:40:40.877355585Z stdout F [render] skill get-a-job: true | agent gibran-ai: true
+2026-11-28T10:40:40.25679887Z stdout F [2026-11-28T10:40:40Z INFO ] Starting container entrypoint...
+2026-11-28T10:40:40.256786023Z stdout F [2026-11-28T10:40:40Z INFO ] Successfully fetched environment variables
+2026-11-28T10:40:39.768555512Z stdout F [2026-11-28T10:40:39Z INFO ] Securely fetching environment variables
+2026-11-28T10:40:18.965480153Z stdout F [2026-11-28T10:40:18Z INFO ] Process terminated with exit code 0
+2026-11-28T10:40:18.960916599Z stdout F [2026-11-28T10:40:18.960Z] SIGTERM, keluar
+2026-11-28T10:35:27.624069254Z stdout F [2026-11-28T10:35:27.623Z] konteks dipindah Account 1983 -> Account 2034 (9 pesan, brief 6406 char)
+2026-11-28T10:35:27.623723782Z stdout F [2026-11-28T10:35:27.623Z] migrasiViaHistory: Account 1983 -> Account 2034 | ekspor 9 pesan | brief 6406 char | sesi baru 468207057891500
+2026-11-28T10:35:17.242842764Z stdout F [2026-11-28T10:35:17.242Z] supervisor: rotated -> Account 2034
+2026-11-28T10:35:17.136229876Z stdout F [2026-11-28T10:35:17.135Z] rotasi akun -> Account 2034 (kredit 8788)
+2026-11-28T10:35:16.947286738Z stdout F [2026-11-28T10:35:16.947Z] check-in harian: already-claimed
+2026-11-28T10:35:16.857603184Z stdout F [2026-11-28T10:35:16.855Z] turn gagal (credit_exhausted) -> check-in / rotasi / migrasi konteks
+2026-11-28T10:35:16.857570646Z stdout F [2026-11-28T10:35:16.855Z] update diterima, message=true
+2026-11-28T10:35:16.855105682Z stdout F [2026-11-28T10:35:16.854Z] webhook masuk: 259 byte, parse=ok, adaMessage=true
+2026-11-28T10:35:14.200599609Z stdout F [2026-11-28T10:35:14.199Z] rotasi akun -> Account 2033 (kredit 10990)
+2026-11-28T10:33:43.005818922Z stdout F [2026-11-28T10:33:42.997Z] konteks dimuat: 17821 karakter | chain akun: 1365
+2026-11-28T10:33:43.005031246Z stdout F [2026-11-28T10:33:42.996Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T10:33:42.920067433Z stdout F [2026-11-28T10:33:42.908Z] pool dimuat: 1365 akun
+2026-11-28T10:33:42.499519255Z stdout F [entrypoint] mode=cloud-agent data=/data port=8080
+2026-11-28T10:33:42.422721035Z stdout F [render] data dir siap: /data
+2026-11-28T10:33:42.422719198Z stdout F [render] gagal tulis mcp.json: BOT_BROWSER_MCP=0
+2026-11-28T10:33:42.422707661Z stdout F [render] config.yaml ditulis
+2026-11-28T10:33:42.420991124Z stdout F [render] skill get-a-job: true | agent gibran-ai: true
+2026-11-28T10:33:42.24005765Z stdout F [2026-11-28T10:33:42Z INFO ] Starting container entrypoint...
+2026-11-28T10:33:42.238777795Z stdout F [2026-11-28T10:33:42Z INFO ] Successfully fetched environment variables
+2026-11-28T10:33:41.740604403Z stdout F [2026-11-28T10:33:41Z INFO ] Securely fetching environment variables
+2026-11-28T10:33:23.125557309Z stdout F [2026-11-28T10:33:23Z INFO ] Process terminated with exit code 0
+2026-11-28T10:33:23.120743942Z stdout F [2026-11-28T10:33:23.120Z] SIGTERM, keluar
+2026-11-28T10:28:30.954423109Z stdout F [2026-11-28T10:28:30.954Z] rotasi akun -> Account 1983 (kredit 10420)
+2026-11-28T10:28:04.844353194Z stdout F [2026-11-28T10:28:04.837Z] konteks dimuat: 17821 karakter | chain akun: 1365
+2026-11-28T10:28:04.8440956Z stdout F [2026-11-28T10:28:04.836Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T10:28:04.75757885Z stdout F [2026-11-28T10:28:04.746Z] pool dimuat: 1365 akun
+2026-11-28T10:28:04.259813498Z stdout F [entrypoint] mode=cloud-agent data=/data port=8080
+2026-11-28T10:28:04.256608285Z stdout F [render] data dir siap: /data
+2026-11-28T10:28:04.256602603Z stdout F [render] gagal tulis mcp.json: BOT_BROWSER_MCP=0
+2026-11-28T10:28:04.256328582Z stdout F [render] config.yaml ditulis
+2026-11-28T10:28:04.254399337Z stdout F [render] skill get-a-job: true | agent gibran-ai: true
+2026-11-28T10:28:04.050383392Z stdout F [2026-11-28T10:28:04Z INFO ] Starting container entrypoint...
+2026-11-28T10:28:04.049522543Z stdout F [2026-11-28T10:28:04Z INFO ] Successfully fetched environment variables
+2026-11-28T10:28:03.551115318Z stdout F [2026-11-28T10:28:03Z INFO ] Securely fetching environment variables
+2026-11-28T10:27:45.170898892Z stdout F [2026-11-28T10:27:45Z INFO ] Process terminated with exit code 0
+2026-11-28T10:27:45.166376583Z stdout F [2026-11-28T10:27:45.165Z] SIGTERM, keluar
+2026-11-28T10:24:40.236268054Z stdout F [2026-11-28T10:24:40.233Z] rotasi akun -> Account 1983 (kredit 10420)
+2026-11-28T10:23:35.215363867Z stdout F [2026-11-28T10:23:35.202Z] konteks dimuat: 17821 karakter | chain akun: 1365
+2026-11-28T10:23:35.215081431Z stdout F [2026-11-28T10:23:35.201Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T10:23:35.139019267Z stdout F [2026-11-28T10:23:35.115Z] pool dimuat: 1365 akun
+2026-11-28T10:23:34.828690249Z stdout F [entrypoint] mode=cloud-agent data=/data port=8080
+2026-11-28T10:23:34.826743051Z stdout F [render] data dir siap: /data
+2026-11-28T10:23:34.826731431Z stdout F [render] gagal tulis mcp.json: BOT_BROWSER_MCP=0
+2026-11-28T10:23:34.825751314Z stdout F [render] config.yaml ditulis
+2026-11-28T10:23:34.824994684Z stdout F [render] skill get-a-job: true | agent gibran-ai: true
+2026-11-28T10:23:34.534211124Z stdout F [2026-11-28T10:23:34Z INFO ] Starting container entrypoint...
+2026-11-28T10:23:34.527152856Z stdout F [2026-11-28T10:23:34Z INFO ] Successfully fetched environment variables
+2026-11-28T10:23:34.021730481Z stdout F [2026-11-28T10:23:34Z INFO ] Securely fetching environment variables
+2026-11-28T10:23:14.756534322Z stdout F [2026-11-28T10:23:14Z INFO ] Process terminated with exit code 0
+2026-11-28T10:23:14.745853529Z stdout F [2026-11-28T10:23:14.745Z] SIGTERM, keluar
+2026-11-28T10:16:09.780740425Z stdout F [2026-11-28T10:16:09.779Z] supervisor: claimed
+2026-11-28T10:16:09.778994962Z stdout F [2026-11-28T10:16:09.778Z] check-in harian: claimed (+400)
+2026-11-28T10:16:09.529191902Z stdout F [2026-11-28T10:16:09.528Z] turn gagal (credit_exhausted) -> check-in / rotasi / migrasi konteks
+2026-11-28T10:16:09.529173103Z stdout F [2026-11-28T10:16:09.528Z] update diterima, message=true
+2026-11-28T10:16:09.528102097Z stdout F [2026-11-28T10:16:09.527Z] webhook masuk: 250 byte, parse=ok, adaMessage=true
+2026-11-28T10:16:07.691841732Z stdout F [2026-11-28T10:16:07.691Z] rotasi akun -> Account 2033 (kredit 10590)
+2026-11-28T10:15:59.74584841Z stdout F [2026-11-28T10:15:59.745Z] update diterima, message=true
+2026-11-28T10:15:59.7458162Z stdout F [2026-11-28T10:15:59.745Z] webhook masuk: 299 byte, parse=ok, adaMessage=true
+2026-11-28T10:14:07.033690881Z stdout F [2026-11-28T10:14:07.033Z] konteks dipindah Account 1983 -> Account 1983 (7 pesan, brief 6406 char)
+2026-11-28T10:14:07.033418349Z stdout F [2026-11-28T10:14:07.033Z] migrasiViaHistory: Account 1983 -> Account 1983 | ekspor 7 pesan | brief 6406 char | sesi baru 468205551923332
+2026-11-28T10:14:04.016870461Z stdout F [2026-11-28T10:14:04.016Z] supervisor: rotated -> Account 1983
+2026-11-28T10:14:04.016603406Z stdout F [2026-11-28T10:14:04.016Z] rotasi akun -> Account 1983 (kredit 10431)
+2026-11-28T10:14:03.607415059Z stdout F [2026-11-28T10:14:03.607Z] cek check-in gagal: MM GET /minimax-cloud/api/v1/signin/status HTTP 401 {"error":"invalid access token"}
+2026-11-28T10:14:03.523878575Z stdout F [2026-11-28T10:14:03.523Z] turn gagal (credit_exhausted) -> check-in / rotasi / migrasi konteks
+2026-11-28T10:14:03.523446324Z stdout F [2026-11-28T10:14:03.523Z] update diterima, message=true
+2026-11-28T10:14:03.52341865Z stdout F [2026-11-28T10:14:03.523Z] webhook masuk: 250 byte, parse=ok, adaMessage=true
+2026-11-28T10:13:55.018518763Z stdout F [2026-11-28T10:13:55.013Z] update diterima, message=true
+2026-11-28T10:13:55.018491822Z stdout F [2026-11-28T10:13:55.013Z] webhook masuk: 299 byte, parse=ok, adaMessage=true
+2026-11-28T10:12:48.368121841Z stdout F [2026-11-28T10:12:48.366Z] sesi tidak idle -> sesi baru 468202848358763 di Account 1983 (3 pesan, brief 6406 char)
+2026-11-28T10:12:48.368090828Z stdout F [2026-11-28T10:12:48.366Z] migrasiViaHistory: Account 1983 -> Account 1983 | ekspor 3 pesan | brief 6406 char | sesi baru 468202848358763
+2026-11-28T10:12:38.378544936Z stdout F [2026-11-28T10:12:38.378Z] turn gagal (session_not_idle) -> check-in / rotasi / migrasi konteks
+2026-11-28T10:11:30.079350288Z stdout F [2026-11-28T10:11:30Z INFO ] Process terminated with exit code 0
+2026-11-28T10:11:30.06470558Z stdout F [2026-11-28T10:11:30.064Z] SIGTERM, keluar
+2026-11-28T10:00:24.303612742Z stdout F [2026-11-28T10:00:24.303Z] ERROR cloud chat 6473032931: postMessage HTTP 409 {"base_resp":{"status_code":0,"status_msg":"ok"},"sse_error_code":1,"code":1406010091,"key":"session_not_idle","message":"session not idle (active turn running)","detail":"session is not idle — use En
+2026-11-28T10:00:23.990011912Z stdout F [2026-11-28T10:00:23.988Z] update diterima, message=true
+2026-11-28T10:00:23.989072988Z stdout F [2026-11-28T10:00:23.988Z] webhook masuk: 297 byte, parse=ok, adaMessage=true
+2026-11-28T09:58:56.022007369Z stdout F [2026-11-28T09:58:56.021Z] rotasi akun -> Account 1983 (kredit 10449)
+2026-11-28T09:57:03.618691953Z stdout F [2026-11-28T09:57:03.606Z] konteks dimuat: 17821 karakter | chain akun: 1365
+2026-11-28T09:57:03.617836578Z stdout F [2026-11-28T09:57:03.606Z] gibran-bot listening di :8080 mode=cloud-agent
+2026-11-28T09:57:03.447550135Z stdout F [2026-11-28T09:57:03.410Z] pool dimuat: 1365 akun

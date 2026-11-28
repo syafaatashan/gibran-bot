@@ -1,0 +1,15 @@
+{
+  "status": 200,
+  "body": {
+    "ok": true,
+    "users": [
+      {
+        "chatId": "6473032931",
+        "mode": "confirm",
+        "applyDailyCap": 5,
+        "appliedToday": 0,
+        "accountLabel": ""
+      }
+    ]
+  }
+}

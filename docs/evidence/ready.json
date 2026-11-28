@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "body": {
+    "ok": true,
+    "mode": "cloud-agent",
+    "cloud": true,
+    "telegram": true,
+    "mcode": true,
+    "agentCount": 5,
+    "bot": "@gibran_id_bot"
+  }
+}

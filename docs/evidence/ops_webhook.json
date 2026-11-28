@@ -1,0 +1,19 @@
+{
+  "status": 200,
+  "body": {
+    "ok": true,
+    "info": {
+      "url": "https://http--gibran-bot--t2lhy99dxnfp.code.run/tg/webhook",
+      "has_custom_certificate": false,
+      "pending_update_count": 0,
+      "last_error_date": 1795878349,
+      "last_error_message": "Wrong response from the webhook: 503 Service Unavailable",
+      "max_connections": 10,
+      "ip_address": "35.193.113.78",
+      "allowed_updates": [
+        "message",
+        "callback_query"
+      ]
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "status": 200,
+  "body": {
+    "ok": true,
+    "lines": [
+      "[2026-11-28T15:05:55.051Z] pool dimuat: 1365 akun",
+      "[2026-11-28T15:05:55.130Z] rotasi dilanjutkan dari index 51 (Account 2034)",
+      "[2026-11-28T15:05:55.162Z] gibran-bot listening di :8080 mode=cloud-agent",
+      "[2026-11-28T15:05:55.162Z] konteks dimuat: 20347 karakter | chain akun: 1365",
+      "[2026-11-28T15:05:55.745Z] perintah bot didaftarkan: 10",
+      "[2026-11-28T15:05:56.065Z] webhook siap: callback_query aktif dan URL cocok",
+      "[2026-11-28T15:05:57.359Z] webhook masuk: 358 byte, parse=ok, adaMessage=true",
+      "[2026-11-28T15:05:57.370Z] update diterima, message=true callback=false",
+      "[2026-11-28T15:06:29.818Z] webhook masuk: 832 byte, parse=ok, adaMessage=false",
+      "[2026-11-28T15:06:29.818Z] update diterima, message=false callback=true",
+      "[2026-11-28T15:06:59.557Z] webhook masuk: 783 byte, parse=ok, adaMessage=false",
+      "[2026-11-28T15:06:59.557Z] update diterima, message=false callback=true",
+      "[2026-11-28T15:07:33.557Z] webhook masuk: 1860 byte, parse=ok, adaMessage=false",
+      "[2026-11-28T15:07:33.557Z] update diterima, message=false callback=true",
+      "[2026-11-28T15:07:34.660Z] turn gagal (session_not_idle) -> check-in / rotasi / migrasi konteks",
+      "[2026-11-28T15:08:52.310Z] migrasiViaHistory: Account 2034 -> Account 2034 | ekspor 50 pesan | brief 6406 char | sesi baru 468276018557270",
+      "[2026-11-28T15:08:52.311Z] sesi tidak idle -> sesi baru 468276018557270 di Account 2034 (50 pesan, brief 6406 char)",
+      "[2026-11-28T15:08:53.090Z] webhook masuk: 360 byte, parse=ok, adaMessage=true",
+      "[2026-11-28T15:08:53.090Z] update diterima, message=true callback=false",
+      "[2026-11-28T15:10:38.919Z] webhook masuk: 360 byte, parse=ok, adaMessage=true",
+      "[2026-11-28T15:10:38.919Z] update diterima, message=true callback=false",
+      "[2026-11-28T15:11:17.568Z] webhook masuk: 1460 byte, parse=ok, adaMessage=false",
+      "[2026-11-28T15:11:17.568Z] update diterima, message=false callback=true",
+      "[2026-11-28T15:11:45.344Z] webhook masuk: 329 byte, parse=ok, adaMessage=true",
+      "[2026-11-28T15:11:45.344Z] update diterima, message=true callback=false",
+      "[2026-11-28T15:11:45.740Z] turn gagal (session_not_idle) -> check-in / rotasi / migrasi konteks",
+      "[2026-11-28T15:12:35.952Z] migrasiViaHistory: Account 2034 -> Account 2034 | ekspor 37 pesan | brief 6406 char | sesi baru 468274599129267",
+      "[2026-11-28T15:12:35.953Z] sesi tidak idle -> sesi baru 468274599129267 di Account 2034 (37 pesan, brief 6406 char)"
+    ]
+  }
+}

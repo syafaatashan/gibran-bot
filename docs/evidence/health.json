@@ -1,0 +1,14 @@
+{
+  "status": 200,
+  "body": {
+    "ok": true,
+    "service": "gibran-bot",
+    "mode": "cloud-agent",
+    "mcode": "mcode",
+    "accounts": 1365,
+    "currentAccount": "Account 2034",
+    "sessions": 1,
+    "contextChars": 20347,
+    "uptimeSec": 479
+  }
+}
