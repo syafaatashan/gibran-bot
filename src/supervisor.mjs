@@ -207,7 +207,7 @@ export async function ensureAccount() {
   } else {
     throw new Error('akun ' + (acc.label || acc.email) + ' tidak punya token sama sekali');
   }
-  writeAuthStore(cred);
+  writeAuthStore(cred, acc.label || acc.email || '');
   persistAccount(acc.label || acc.email || '', cred);
   state.accounts.currentLabel = acc.label || acc.email || '';
   saveStore();
