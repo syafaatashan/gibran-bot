@@ -71,6 +71,26 @@ export function importChainFromEnv() {
   }
 }
 
+// Gabungkan akun dari body request (chain 1365 akun terlalu besar untuk env var:
+// 'Argument list too long' saat container start). Dipakai lewat POST /ops/chain.
+export function mergeChainFromBody(list) {
+  if (!Array.isArray(list) || !list.length) return 0;
+  const chain = loadChain();
+  const byLabel = new Map();
+  for (const a of chain) byLabel.set(a.label || a.email, a);
+  for (const a of list) {
+    if (!a || !(a.refreshToken || a.accessToken)) continue;
+    const key = a.label || a.email;
+    if (!key) continue;
+    byLabel.set(key, Object.assign({}, byLabel.get(key) || {}, a));
+  }
+  const merged = Array.from(byLabel.values());
+  saveChain(merged);
+  state.accounts.currentIndex = -1;
+  saveStore();
+  return merged.length;
+}
+
 export function saveChain(chain) {
   try {
     fs.writeFileSync(CHAIN_FILE, JSON.stringify({ generatedAtMs: Date.now(), accounts: chain }, null, 2));

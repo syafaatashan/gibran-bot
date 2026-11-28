@@ -5,7 +5,7 @@ import { state, saveStore, getSession, setSession } from './store.mjs';
 import { log } from './log.mjs';
 import {
   ensureAccount, handleCreditExhausted, chainLabels, currentAccount,
-  rotate, rotateRobust, creditSummary, signinStatus, claimCheckin, importChainFromEnv,
+  rotate, rotateRobust, creditSummary, signinStatus, claimCheckin, importChainFromEnv, mergeChainFromBody,
 } from './supervisor.mjs';
 import { runExec } from './mcode.mjs';
 import {
@@ -250,8 +250,20 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && p === '/ops/chain') {
     if (!opsOk(req)) return send(res, 401, { ok: false, error: 'token ops salah' });
-    const n = importChainFromEnv();
-    return send(res, 200, { ok: true, imported: n, chain: chainLabels() });
+    let raw = '';
+    req.on('data', (c) => { raw += c; if (raw.length > 3 * 1024 * 1024) req.destroy(); });
+    req.on('end', () => {
+      let body = null;
+      try { body = JSON.parse(raw || '{}'); } catch { /* abaikan */ }
+      let n = 0;
+      if (body && Array.isArray(body.accounts)) {
+        n = mergeChainFromBody(body.accounts);
+      } else {
+        n = importChainFromEnv();
+      }
+      send(res, 200, { ok: true, total: n, chain: chainLabels() });
+    });
+    return undefined;
   }
 
   if (req.method === 'GET' && p === '/ops/accounts') {
