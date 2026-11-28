@@ -12,6 +12,8 @@ export const CFG = {
   mcodeEffort: process.env.MCODE_EFFORT || '',
   accountsFile: process.env.ACCOUNTS_FILE || '/data/accounts.json',
   accountsJson: process.env.ACCOUNTS_JSON || '',
+  skillDir: process.env.BOT_SKILL_DIR || '/app/skill/get-a-job',
+  personaFile: process.env.BOT_PERSONA_FILE || '/app/agent/gibran-ai/agent.md',
   timezone: process.env.MINIMAX_TIMEZONE || 'Asia/Makassar',
   maxAttempts: Number(process.env.BOT_MAX_ATTEMPTS || 3),
   telegram: {

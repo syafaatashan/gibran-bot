@@ -5,7 +5,7 @@ import { state, saveStore, getSession, setSession } from './store.mjs';
 import { log } from './log.mjs';
 import {
   ensureAccount, handleCreditExhausted, chainLabels, currentAccount,
-  rotate, creditSummary, signinStatus,
+  rotate, creditSummary, signinStatus, claimCheckin,
 } from './supervisor.mjs';
 import { runExec } from './mcode.mjs';
 import {
@@ -159,7 +159,7 @@ async function handleCloudAgent(msg) {
 }
 
 async function handleUpdate(update) {
-  log('handleUpdate dipanggil, message=' + !!(update && update.message));
+  log('update diterima, message=' + !!(update && update.message));
   if (!update || !update.message) return;
   const msg = update.message;
   const text = String(msg.text || '').trim();
@@ -259,10 +259,29 @@ const server = http.createServer((req, res) => {
 
   if (req.method === 'POST' && p === '/ops/rotate') {
     if (!opsOk(req)) return send(res, 401, { ok: false, error: 'token ops salah' });
+    let raw = '';
+    req.on('data', (c) => { raw += c; });
+    req.on('end', () => {
+      let body = {};
+      try { body = JSON.parse(raw || '{}'); } catch { /* abaikan */ }
+      (async () => {
+        try {
+          const r = await rotate(typeof body.index === 'number' ? body.index : undefined);
+          return send(res, 200, { ok: true, current: r.label, agentId: r.agentId, chain: chainLabels() });
+        } catch (e) {
+          return send(res, 500, { ok: false, error: String((e && e.message) || e).slice(0, 250) });
+        }
+      })();
+    });
+    return undefined;
+  }
+
+  if (req.method === 'POST' && p === '/ops/claim') {
+    if (!opsOk(req)) return send(res, 401, { ok: false, error: 'token ops salah' });
     return (async () => {
       try {
-        const r = await rotate();
-        return send(res, 200, { ok: true, current: r.label, chain: chainLabels() });
+        const r = await claimCheckin();
+        return send(res, 200, Object.assign({ ok: true }, r));
       } catch (e) {
         return send(res, 500, { ok: false, error: String((e && e.message) || e).slice(0, 250) });
       }

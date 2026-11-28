@@ -153,10 +153,12 @@ export async function ensureAccount() {
   return Object.assign({ label: acc.label, agentId: acc.agentId }, cred);
 }
 
-export async function rotate() {
+export async function rotate(targetIndex) {
   const chain = loadChain();
   if (!chain.length) throw new Error('chain akun kosong');
-  const next = (state.accounts.currentIndex + 1) % chain.length;
+  const next = (typeof targetIndex === 'number' && targetIndex >= 0)
+    ? targetIndex % chain.length
+    : (state.accounts.currentIndex + 1) % chain.length;
   state.accounts.currentIndex = next;
   state.accounts.rotatedAt = Date.now();
   saveStore();
@@ -217,6 +219,17 @@ export async function creditSummary(token) {
   const remaining = details.reduce((sum, d) => sum + Number(d.remaining_amount || 0), 0);
   const granted = details.reduce((sum, d) => sum + Number(d.granted_amount || 0), 0);
   return { remaining, granted, entries: details.length };
+}
+
+// Klaim check-in harian untuk akun aktif (dipakai supervisor dan endpoint ops).
+export async function claimCheckin() {
+  const acc = currentAccount();
+  if (!acc || !acc.accessToken) throw new Error('akun aktif tidak punya access token');
+  const st = await signinStatus(acc.accessToken);
+  if (st.claimedToday) return { action: 'already-claimed', today: st.today };
+  const claim = await claimSignin(acc.accessToken);
+  log('check-in diklaim: claim_result=' + claim.claimResult + ' points=' + claim.points);
+  return { action: 'claimed', claimResult: claim.claimResult, points: claim.points, dayNo: claim.dayNo };
 }
 
 // Dipanggil saat turn gagal karena kredit habis: coba klaim check-in dulu, lalu rotasi.
