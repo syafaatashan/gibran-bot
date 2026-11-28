@@ -13,6 +13,7 @@ import {
 } from './telegram.mjs';
 import { api as cloudApi, createSession as cloudCreateSession, postMessage as cloudPost } from './minimax.mjs';
 import { buildContextBundle } from './context.mjs';
+import { buildContextBrief } from './session-context.mjs';
 
 const CONTEXT = buildContextBundle();
 const busy = new Map();
@@ -75,11 +76,13 @@ async function handleRuntimeLocal(msg) {
     placeholderId = sent[0] || null;
     log('turn mulai untuk chat ' + key + ' (placeholder=' + placeholderId + ')');
     let result = null;
+    let sessionId = prev ? prev.sessionId : null;
+    let prompt = text;
     for (let attempt = 1; attempt <= CFG.maxAttempts; attempt++) {
       result = await runExec({
         cwd,
-        sessionId: prev ? prev.sessionId : null,
-        prompt: text,
+        sessionId: sessionId,
+        prompt: prompt,
         onEvent,
       });
       if (!result.creditError && !result.authError) break;
@@ -87,17 +90,28 @@ async function handleRuntimeLocal(msg) {
         log('turn gagal karena kredit (percobaan ' + attempt + ')');
         const act = await handleCreditExhausted();
         log('supervisor: ' + act.action + (act.label ? ' -> ' + act.label : ''));
+        if (act.action === 'rotated' || act.action === 'rotate-failed') {
+          const brief = buildContextBrief(sessionId);
+          if (brief) { sessionId = null; prompt = brief + text; log('akun ganti -> sesi baru, konteks dipindah (' + brief.length + ' karakter)'); }
+        }
         progress = '';
         continue;
       }
       if (result.authError) {
         log('token ditolak -> rotasi ke akun lain');
+        let rotated = false;
         try {
           const r = await rotateRobust();
           log('rotasi setelah auth error -> ' + r.label);
+          rotated = true;
         } catch (e) {
           log('rotasi gagal: ' + String((e && e.message) || e).slice(0, 140));
           await ensureAccount();
+        }
+        if (rotated) {
+          // Sesi MCode terikat akun pembuatnya -> setelah rotasi harus pakai sesi baru.
+          const brief = buildContextBrief(sessionId);
+          if (brief) { sessionId = null; prompt = brief + text; log('akun ganti -> sesi baru, konteks dipindah (' + brief.length + ' karakter)'); }
         }
         progress = '';
         continue;
