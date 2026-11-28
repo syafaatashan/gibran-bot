@@ -26,13 +26,18 @@ export function recordKey() {
   return 'com.minimax.mcode.oauth.prod.en' + String.fromCharCode(0) + accountId();
 }
 
+const CHAIN_FILE = path.join(CFG.dataDir, 'accounts.json');
+
+// Chain akun disimpan di volume (bukan hanya env) karena refresh token
+// single-use: setiap hasil refresh harus langsung ditulis balik, kalau tidak
+// token lama jadi invalid_grant dan akun tidak bisa dipakai lagi.
 export function loadChain() {
-  let raw = CFG.accountsJson;
+  let raw = '';
+  try { raw = fs.readFileSync(CHAIN_FILE, 'utf8'); } catch { raw = ''; }
   if (!raw) {
-    try {
-      raw = fs.readFileSync(CFG.accountsFile, 'utf8');
-    } catch {
-      raw = '';
+    raw = CFG.accountsJson || '';
+    if (raw) {
+      try { fs.writeFileSync(CHAIN_FILE, raw); } catch { /* abaikan */ }
     }
   }
   if (!raw) return [];
@@ -44,6 +49,26 @@ export function loadChain() {
     log('gagal parse chain akun: ' + String(e.message || e));
     return [];
   }
+}
+
+export function saveChain(chain) {
+  try {
+    fs.writeFileSync(CHAIN_FILE, JSON.stringify({ generatedAtMs: Date.now(), accounts: chain }, null, 2));
+  } catch (e) {
+    log('gagal simpan chain akun: ' + String(e.message || e));
+  }
+}
+
+function persistAccount(label, cred) {
+  const chain = loadChain();
+  for (const a of chain) {
+    if ((a.label || '') === label) {
+      a.accessToken = cred.accessToken;
+      a.refreshToken = cred.refreshToken;
+      a.expiresAtMs = cred.expiresAtMs;
+    }
+  }
+  saveChain(chain);
 }
 
 export function chainLabels() {
@@ -148,6 +173,7 @@ export async function ensureAccount() {
     throw new Error('akun ' + (acc.label || acc.email) + ' tidak punya token sama sekali');
   }
   writeAuthStore(cred);
+  persistAccount(acc.label || acc.email || '', cred);
   state.accounts.currentLabel = acc.label || acc.email || '';
   saveStore();
   return Object.assign({ label: acc.label, agentId: acc.agentId }, cred);
@@ -191,6 +217,7 @@ export async function rotate(targetIndex) {
     cred = { accessToken: acc.accessToken, refreshToken: '', expiresAtMs: Number(acc.expiresAtMs || 0) };
   }
   writeAuthStore(cred);
+  persistAccount(acc.label || acc.email || '', cred);
   state.accounts.currentLabel = acc.label || acc.email || '';
   saveStore();
   log('rotasi akun -> ' + state.accounts.currentLabel);
@@ -269,6 +296,12 @@ export async function handleCreditExhausted() {
       log('gagal cek check-in: ' + String(e.message || e));
     }
   }
-  const rotated = await rotate();
+  let rotated;
+  try {
+    rotated = await rotate();
+  } catch (e) {
+    log('rotasi gagal: ' + String((e && e.message) || e).slice(0, 160));
+    return { action: 'rotate-failed', error: String((e && e.message) || e).slice(0, 200) };
+  }
   return { action: 'rotated', label: rotated.label };
 }
