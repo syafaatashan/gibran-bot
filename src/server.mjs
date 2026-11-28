@@ -6,12 +6,13 @@ import { log } from './log.mjs';
 import {
   ensureAccount, handleCreditExhausted, chainLabels, currentAccount,
   rotate, rotateRobust, creditSummary, signinStatus, claimCheckin, importChainFromEnv, mergeChainFromBody,
+  leaseForChat, setChatLease, clearChatLease, migrateChatContext, tokenForLabel, agentIdForLabel,
 } from './supervisor.mjs';
 import { runExec } from './mcode.mjs';
 import {
   sendMessage, editMessageText, sendChatAction, getMe, setWebhook, getWebhookInfo,
 } from './telegram.mjs';
-import { api as cloudApi, createSession as cloudCreateSession, postMessage as cloudPost } from './minimax.mjs';
+import { api as cloudApi, createSession as cloudCreateSession, postMessage as cloudPost, ERR } from './minimax.mjs';
 import { buildContextBundle } from './context.mjs';
 import { buildContextBrief } from './session-context.mjs';
 
@@ -153,25 +154,58 @@ async function handleCloudAgent(msg) {
   busy.set(key, true);
   const stopTyping = await keepTyping(chatId);
   try {
-    const token = await ensureAccount();
-    const prev = getSession(key);
-    let sid = prev && prev.sessionId;
+    // 1) lease: chat -> {label akun, sessionId}. Sesi milik akun pembuatnya.
+    const lease = leaseForChat(key);
+    let label = lease && lease.label;
+    let sid = lease && lease.sessionId;
     let first = false;
-    if (!sid) {
-      sid = await cloudCreateSession('gibran-bot-' + key);
+    if (!label || !sid) {
+      const acc = await ensureAccount();
+      label = acc.label;
+      sid = await cloudCreateSession(acc.agentId, 'gibran-bot-' + key, acc.accessToken);
       first = true;
+      setChatLease(key, { label, sessionId: sid, agentId: acc.agentId, mode: 'cloud' });
     }
     const content = first
       ? CONTEXT + '\n\n---\n\n# PESAN PENGGUNA PERTAMA (Telegram)\n\n' + text
       : text;
-    const out = await cloudPost(sid, content);
-    setSession(key, { sessionId: sid, mode: 'cloud' });
-    await sendMessage(chatId, (out.text || '').trim() || 'Maaf, jawaban kosong. Coba ulangi ya.');
+    let reply = '';
+    try {
+      const token = await tokenForLabel(label);
+      const out = await cloudPost(sid, content, { token, sender: { agent_name: label } });
+      reply = (out && out.text) || '';
+    } catch (e) {
+      const kind = e && e.kind;
+      if (kind !== ERR.OWNERSHIP && kind !== ERR.CREDIT && kind !== ERR.AUTH) throw e;
+      log('turn gagal (' + kind + ') -> check-in / rotasi / migrasi konteks');
+      // a) kredit habis -> klaim check-in harian lalu ulangi di akun yang sama
+      if (kind === ERR.CREDIT) {
+        const act = await handleCreditExhausted();
+        log('supervisor: ' + act.action + (act.label ? ' -> ' + act.label : ''));
+        if (act.action === 'claimed') {
+          try {
+            const token = await tokenForLabel(label);
+            const out = await cloudPost(sid, content, { token, sender: { agent_name: label } });
+            reply = (out && out.text) || '';
+          } catch { /* tetap lanjut ke rotasi */ }
+        }
+      }
+      // b) masih gagal -> rotasi akun + pindahkan konteks (export -> sesi baru -> inject)
+      if (!reply) {
+        const next = await rotateRobust();
+        const r = await migrateChatContext(key, label, next.label, content);
+        reply = (r && r.reply) || '';
+        log('konteks dipindah ' + label + ' -> ' + next.label + ' (' + r.exportedCount + ' pesan, brief ' + r.briefChars + ' char)');
+      }
+    }
+    await sendMessage(chatId, (reply || '').trim() || 'Maaf, jawaban kosong. Coba ulangi ya.');
   } catch (e) {
     lastError.message = String((e && e.message) || e).slice(0, 400);
     lastError.at = Date.now();
     log('ERROR cloud chat ' + key + ': ' + lastError.message);
-    try { await sendMessage(chatId, '⚠️ Gagal memproses: ' + lastError.message.slice(0, 200)); } catch { /* abaikan */ }
+    try {
+      await sendMessage(chatId, '⚠️ Gagal memproses: ' + lastError.message.slice(0, 200));
+    } catch { /* abaikan */ }
   } finally {
     stopTyping();
     busy.delete(key);

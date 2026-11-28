@@ -1,67 +1,224 @@
-import crypto from 'node:crypto';
+// src/supervisor.mjs - supervisor kredensial, rotasi akun & migrasi konteks.
+//
+// Semua account management dipegang AccountPool (terbukti 19/19 uji terima).
+// Refresh token OAuth = single-use -> hasil refresh langsung ditulis balik ke
+// file chain (tmp+rename, atomik). Token invalid_grant ditandai dead.
 import fs from 'node:fs';
 import path from 'node:path';
 import { CFG } from './config.mjs';
-import { state, saveStore } from './store.mjs';
+import { state, saveStore, getSession, setSession } from './store.mjs';
 import { log } from './log.mjs';
-
-const AUTH_HOME = path.join(CFG.dataDir, 'auth');
-const NS_DIR = path.join(AUTH_HOME, 'prod', 'en', 'mcode-public');
-const SALT = CFG.mm.salt;
-
-function md5(s) {
-  return crypto.createHash('md5').update(s, 'utf8').digest('hex');
-}
-
-// accountId = base64url_nopad(sha256(authHome + NUL + clientId)) -> nilainya per mesin
-export function accountId() {
-  return crypto
-    .createHash('sha256')
-    .update(AUTH_HOME + String.fromCharCode(0) + CFG.mm.clientId)
-    .digest('base64url')
-    .replace(/=+$/, '');
-}
-
-export function recordKey() {
-  return 'com.minimax.mcode.oauth.prod.en' + String.fromCharCode(0) + accountId();
-}
+import { AccountPool } from './lib/account-pool.mjs';
+import { MiniMaxCloud, ERR } from './lib/minimax-client.mjs';
+import { SessionMigrator } from './lib/session-migrator.mjs';
 
 const CHAIN_FILE = path.join(CFG.dataDir, 'accounts.json');
+const SEED_FILE = CFG.accountsSeedFile;
 
-// Chain akun disimpan di volume (bukan hanya env) karena refresh token
-// single-use: setiap hasil refresh harus langsung ditulis balik, kalau tidak
-// token lama jadi invalid_grant dan akun tidak bisa dipakai lagi.
-export function loadChain() {
-  let raw = '';
-  try { raw = fs.readFileSync(CHAIN_FILE, 'utf8'); } catch { raw = ''; }
+export const cloud = new MiniMaxCloud({
+  base: CFG.mm.base,
+  salt: CFG.mm.salt,
+  timezone: CFG.timezone,
+  log: (m) => log(String(m)),
+});
+
+// Seed chain: env ACCOUNTS_JSON dulu, lalu file seed di volume.
+function seedChainFile() {
+  if (fs.existsSync(CHAIN_FILE)) return;
+  let raw = CFG.accountsJson || '';
   if (!raw) {
-    // urutan: env ACCOUNTS_JSON -> file seed (ACCOUNTS_SEED_FILE) -> chain file
-    raw = CFG.accountsJson || '';
-    if (!raw) {
-      try { raw = fs.readFileSync(CFG.accountsSeedFile, 'utf8'); } catch { raw = ''; }
-    }
-    if (raw) {
-      try { fs.writeFileSync(CHAIN_FILE, raw); log('chain akun di-seed dari sumber baru'); } catch { /* abaikan */ }
-    }
+    try { raw = fs.readFileSync(SEED_FILE, 'utf8'); } catch { raw = ''; }
   }
-  if (!raw) return [];
+  if (!raw) return;
   try {
-    const j = JSON.parse(raw);
-    const list = Array.isArray(j) ? j : j.accounts || [];
-    return list.filter((a) => a && (a.refreshToken || a.accessToken));
+    fs.writeFileSync(CHAIN_FILE, raw);
+    log('chain akun di-seed (' + Math.round(raw.length / 1024) + ' KB)');
   } catch (e) {
-    log('gagal parse chain akun: ' + String(e.message || e));
-    return [];
+    log('gagal seed chain: ' + String(e.message || e).slice(0, 120));
   }
 }
 
-// Ganti chain di volume dengan isi env (dipakai untuk pembaruan massal tanpa rebuild).
+export const pool = new AccountPool({
+  accountsFile: CHAIN_FILE,
+  stateFile: CHAIN_FILE,
+  cloud,
+  timezone: CFG.timezone,
+  log: (m) => log(String(m)),
+});
+seedChainFile();
+try {
+  pool.load();
+} catch (e) {
+  log('chain akun belum ada: ' + String(e.message || e).slice(0, 120));
+}
+
+export const migrator = new SessionMigrator({ cloud, pool, log: (m) => log(String(m)) });
+
+export function chainLabels() {
+  return pool.labels();
+}
+
+export function currentAccount() {
+  const idx = pool.currentIndex >= 0 ? pool.currentIndex : 0;
+  return pool.accounts[idx] || null;
+}
+
+export async function tokenForLabel(label) {
+  return pool.tokenFor(label);
+}
+
+export async function agentIdForLabel(label) {
+  return pool.agentIdFor(label);
+}
+
+export async function ensureAccount() {
+  // Self-healing: token bisa ditolak虽然 belum kedaluwarsa (mis. sudah dipakai
+  // runtime lain). Coba paksa refresh; kalau invalid_grant -> tandai dead & rotasi.
+  for (let attempt = 0; attempt < 25; attempt++) {
+    const acc = currentAccount();
+    if (!acc) throw new Error('chain akun kosong');
+    const label = acc.label || acc.email;
+    if (acc.dead) {
+      try { await rotateRobust(); } catch (e) { break; }
+      continue;
+    }
+    let token = null;
+    let agentId = null;
+    try {
+      token = await pool.tokenFor(label);
+      agentId = await pool.agentIdFor(label);
+    } catch (e) {
+      log('akun ' + label + ' token ditolak -> paksa refresh');
+      try {
+        const r = await pool.refresh(label);
+        token = r.accessToken;
+        agentId = await pool.agentIdFor(label);
+      } catch (e2) {
+        acc.dead = true;
+        acc.deadReason = 'invalid_grant';
+        pool.persist();
+        log('akun ' + label + ' mati -> rotasi');
+        try { await rotateRobust(); } catch (e3) { break; }
+        continue;
+      }
+    }
+    state.accounts.currentIndex = pool.currentIndex >= 0 ? pool.currentIndex : 0;
+    state.accounts.currentLabel = label;
+    saveStore();
+    return { label, agentId, accessToken: token, account: acc };
+  }
+  throw new Error('tidak ada akun yang bisa dipakai');
+}
+
+export async function rotateRobust(targetIndex) {
+  const n = pool.size();
+  if (!n) throw new Error('chain akun kosong');
+  const start = (typeof targetIndex === 'number' && targetIndex >= 0)
+    ? targetIndex % n
+    : (pool.currentIndex + 1 + n) % n;
+  for (let i = 0; i < n; i++) {
+    const idx = (start + i) % n;
+    const acc = pool.accounts[idx];
+    if (!acc || acc.dead) continue;
+    const label = acc.label || acc.email;
+    try {
+      const c = await pool.credit(label);
+      if (c.remaining > 0) {
+        pool.currentIndex = idx;
+        state.accounts.currentIndex = idx;
+        state.accounts.currentLabel = label;
+        state.accounts.rotatedAt = Date.now();
+        pool.persist();
+        saveStore();
+        log('rotasi akun -> ' + label + ' (kredit ' + Math.round(c.remaining) + ')');
+        return { label, agentId: await pool.agentIdFor(label) };
+      }
+    } catch (e) {
+      if (e && (e.kind === ERR.AUTH || /invalid_grant/.test(String(e.message || e)))) {
+        acc.dead = true;
+        acc.deadReason = 'invalid_grant';
+        pool.persist();
+      }
+    }
+  }
+  throw new Error('tidak ada akun dengan kredit');
+}
+
+export async function handleCreditExhausted() {
+  const acc = currentAccount();
+  if (acc) {
+    try {
+      const claim = await pool.claimCheckin(acc.label || acc.email);
+      log('check-in harian: ' + claim.action + (claim.points ? ' (+' + claim.points + ')' : ''));
+      if (claim.action === 'claimed') return { action: 'claimed', points: claim.points };
+    } catch (e) {
+      log('cek check-in gagal: ' + String(e.message || e).slice(0, 140));
+    }
+  }
+  try {
+    const r = await rotateRobust();
+    return { action: 'rotated', label: r.label };
+  } catch (e) {
+    return { action: 'rotate-failed', error: String(e.message || e).slice(0, 200) };
+  }
+}
+
+export async function creditSummary() {
+  const acc = currentAccount();
+  if (!acc) return { remaining: 0, granted: 0, entries: 0 };
+  return pool.credit(acc.label || acc.email);
+}
+
+export async function signinStatus() {
+  const acc = currentAccount();
+  if (!acc) return { claimedToday: false, today: null };
+  return cloud.signinStatus(await pool.tokenFor(acc.label || acc.email));
+}
+
+export async function claimCheckin() {
+  const acc = currentAccount();
+  if (!acc) throw new Error('tidak ada akun aktif');
+  return pool.claimCheckin(acc.label || acc.email);
+}
+
+export async function rotate(targetIndex) {
+  return rotateRobust(targetIndex);
+}
+
+export function leaseForChat(chatId) {
+  return getSession(chatId);
+}
+
+export function setChatLease(chatId, info) {
+  setSession(chatId, info);
+}
+
+export function clearChatLease(chatId) {
+  setSession(chatId, { label: '', sessionId: '' });
+}
+
+// Migrasi konteks: export histori (token akun PEMILIK) -> sesi baru di akun
+// tujuan -> inject brief + pesan lanjutan. Bukti: penanda dari akun A masuk ke
+// sesi akun B, dan A lalu ditolak di sesi baru.
+export async function migrateChatContext(chatId, oldLabel, newLabel, userText) {
+  const lease = getSession(chatId) || {};
+  const r = await migrator.migrateViaHistory({
+    sessionId: lease.sessionId,
+    oldLabel,
+    newLabel,
+    userText,
+  });
+  setChatLease(chatId, { label: newLabel, sessionId: r.newSessionId, agentId: '', migrated: true });
+  return r;
+}
+
 export function importChainFromEnv() {
   if (!CFG.accountsJson) return 0;
   try {
     const j = JSON.parse(CFG.accountsJson);
     const list = Array.isArray(j) ? j : j.accounts || [];
-    saveChain(list);
+    fs.writeFileSync(CHAIN_FILE, JSON.stringify({ accounts: list }, null, 2));
+    pool.load();
     state.accounts.currentIndex = -1;
     saveStore();
     return list.length;
@@ -71,11 +228,9 @@ export function importChainFromEnv() {
   }
 }
 
-// Gabungkan akun dari body request (chain 1365 akun terlalu besar untuk env var:
-// 'Argument list too long' saat container start). Dipakai lewat POST /ops/chain.
 export function mergeChainFromBody(list) {
   if (!Array.isArray(list) || !list.length) return 0;
-  const chain = loadChain();
+  const chain = pool.accounts.slice();
   const byLabel = new Map();
   for (const a of chain) byLabel.set(a.label || a.email, a);
   for (const a of list) {
@@ -85,337 +240,9 @@ export function mergeChainFromBody(list) {
     byLabel.set(key, Object.assign({}, byLabel.get(key) || {}, a));
   }
   const merged = Array.from(byLabel.values());
-  saveChain(merged);
+  fs.writeFileSync(CHAIN_FILE, JSON.stringify({ accounts: merged }, null, 2));
+  pool.load();
   state.accounts.currentIndex = -1;
   saveStore();
   return merged.length;
-}
-
-export function saveChain(chain) {
-  try {
-    fs.writeFileSync(CHAIN_FILE, JSON.stringify({ generatedAtMs: Date.now(), accounts: chain }, null, 2));
-  } catch (e) {
-    log('gagal simpan chain akun: ' + String(e.message || e));
-  }
-}
-
-function persistAccount(label, cred) {
-  const chain = loadChain();
-  for (const a of chain) {
-    if ((a.label || '') === label) {
-      a.accessToken = cred.accessToken;
-      a.refreshToken = cred.refreshToken;
-      a.expiresAtMs = cred.expiresAtMs;
-    }
-  }
-  saveChain(chain);
-}
-
-export function chainLabels() {
-  return loadChain().map((a) => a.label || a.email || 'akun');
-}
-
-export function currentAccount() {
-  const chain = loadChain();
-  if (!chain.length) return null;
-  const idx = state.accounts.currentIndex >= 0 ? state.accounts.currentIndex : 0;
-  return chain[Math.min(idx, chain.length - 1)] || null;
-}
-
-export async function refreshOAuth(refreshToken) {
-  const body = new URLSearchParams({
-    client_id: CFG.mm.clientId,
-    grant_type: 'refresh_token',
-    refresh_token: refreshToken,
-    scope: CFG.mm.scope,
-    audience: CFG.mm.audience,
-  });
-  const res = await fetch(CFG.mm.tokenUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'MiniMax Code/3.1.17' },
-    body,
-  });
-  const txt = await res.text();
-  let t = {};
-  try { t = JSON.parse(txt); } catch { /* biarkan */ }
-  if (!res.ok || !t.access_token) {
-    throw new Error('refresh OAuth gagal HTTP ' + res.status + ' ' + txt.slice(0, 160));
-  }
-  return {
-    accessToken: t.access_token,
-    refreshToken: t.refresh_token || refreshToken,
-    expiresAtMs: Date.now() + Number(t.expires_in || 43200) * 1000,
-  };
-}
-
-export function writeAuthStore(cred, label) {
-  fs.mkdirSync(NS_DIR, { recursive: true });
-  const key = recordKey();
-  fs.writeFileSync(
-    path.join(NS_DIR, 'auth.json'),
-    JSON.stringify({
-      schemaVersion: 1,
-      records: {
-        [key]: {
-          schemaVersion: 1,
-          accessToken: cred.accessToken,
-          refreshToken: cred.refreshToken || '',
-          tokenType: 'Bearer',
-          clientId: CFG.mm.clientId,
-          scopes: [CFG.mm.scope],
-          audience: CFG.mm.audience,
-          expiresAtMs: cred.expiresAtMs,
-          generation: Number(cred.generation || 1),
-          loginEpoch: cred.loginEpoch || 'nf-' + Date.now(),
-        },
-      },
-    }, null, 2),
-  );
-  const prev = readJson(path.join(NS_DIR, 'auth-state.json')) || {};
-  fs.writeFileSync(
-    path.join(NS_DIR, 'auth-state.json'),
-    JSON.stringify(Object.assign({}, prev, {
-      schemaVersion: 2,
-      status: 'authenticated',
-      storeKind: 'file',
-      clientId: CFG.mm.clientId,
-      scopes: [CFG.mm.scope],
-      audience: CFG.mm.audience,
-      buildEnv: 'prod',
-      region: 'en',
-      botAccountLabel: label || (prev && prev.botAccountLabel) || '',
-      generation: Number(cred.generation || 1),
-      expiresAtMs: cred.expiresAtMs,
-    }), null, 2),
-  );
-}
-
-function readJson(p) {
-  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
-}
-
-function readAuthStoreLabel() {
-  try {
-    const j = JSON.parse(fs.readFileSync(path.join(NS_DIR, 'auth-state.json'), 'utf8'));
-    return j.botAccountLabel || '';
-  } catch {
-    return '';
-  }
-}
-
-function readAuthStoreRecord() {
-  try {
-    const j = JSON.parse(fs.readFileSync(path.join(NS_DIR, 'auth.json'), 'utf8'));
-    const recs = Object.values(j.records || {});
-    return recs.length ? recs[0] : null;
-  } catch {
-    return null;
-  }
-}
-// Pastikan akun aktif punya access token yang valid dan sudah ditulis ke auth store.
-export async function ensureAccount() {
-  const acc = currentAccount();
-  if (!acc) {
-    throw new Error('chain akun kosong (ACCOUNTS_JSON / accounts file belum diisi)');
-  }
-  const expiresAtMs = Number(acc.expiresAtMs || 0);
-  let cred = null;
-  // Auth store selalu memegang token terbaru untuk akun aktif. Jika chain basi
-  // (mis. setelah refresh di runtime lain), ambil dari sana lalu selaraskan.
-  const storeRec = readAuthStoreRecord();
-  const storeLabel = readAuthStoreLabel();
-  const accLabel = acc.label || acc.email || '';
-  const labelMatch = !storeLabel || !accLabel || storeLabel === accLabel;
-  if (labelMatch && storeRec && storeRec.accessToken && Number(storeRec.expiresAtMs || 0) - Date.now() > 5 * 60 * 1000) {
-    cred = {
-      accessToken: storeRec.accessToken,
-      refreshToken: storeRec.refreshToken,
-      expiresAtMs: Number(storeRec.expiresAtMs),
-      generation: storeRec.generation || 1,
-    };
-    acc.accessToken = cred.accessToken;
-    acc.refreshToken = cred.refreshToken;
-    acc.expiresAtMs = cred.expiresAtMs;
-  } else if (acc.accessToken && expiresAtMs - Date.now() > 5 * 60 * 1000) {
-    cred = { accessToken: acc.accessToken, refreshToken: acc.refreshToken, expiresAtMs, generation: acc.generation || 1 };
-  } else if (acc.refreshToken) {
-    log('refresh OAuth untuk akun ' + (acc.label || acc.email));
-    cred = await refreshOAuth(acc.refreshToken);
-    acc.accessToken = cred.accessToken;
-    acc.refreshToken = cred.refreshToken;
-    acc.expiresAtMs = cred.expiresAtMs;
-  } else {
-    throw new Error('akun ' + (acc.label || acc.email) + ' tidak punya token sama sekali');
-  }
-  writeAuthStore(cred, acc.label || acc.email || '');
-  persistAccount(acc.label || acc.email || '', cred);
-  state.accounts.currentLabel = acc.label || acc.email || '';
-  saveStore();
-  return Object.assign({ label: acc.label, agentId: acc.agentId }, cred);
-}
-
-function eligible(acc) {
-  // Akun pool hanya bisa dipakai di mode cloud-agent. Mode runtime-local butuh
-  // akun yang sudah sign-in penuh (content review auth), ditandai runtime: true.
-  if (CFG.mode !== 'runtime-local') return true;
-  return acc.runtime !== false;
-}
-
-export async function rotate(targetIndex) {
-  const chain = loadChain();
-  if (!chain.length) throw new Error('chain akun kosong');
-  let next;
-  if (typeof targetIndex === 'number' && targetIndex >= 0) {
-    next = targetIndex % chain.length;
-  } else {
-    next = (state.accounts.currentIndex + 1) % chain.length;
-    for (let i = 0; i < chain.length && !eligible(chain[next]); i++) {
-      next = (next + 1) % chain.length;
-    }
-    if (!eligible(chain[next])) {
-      // Tidak ada akun runtime lain: tetap di akun sekarang (check-in sudah dicoba).
-      next = state.accounts.currentIndex >= 0 ? state.accounts.currentIndex : 0;
-      log('tidak ada akun runtime lain yang eligible, tetap di akun sekarang');
-    }
-  }
-  state.accounts.currentIndex = next;
-  state.accounts.rotatedAt = Date.now();
-  saveStore();
-  const acc = chain[next];
-  let cred;
-  if (acc.refreshToken) {
-    cred = await refreshOAuth(acc.refreshToken);
-    acc.accessToken = cred.accessToken;
-    acc.refreshToken = cred.refreshToken;
-    acc.expiresAtMs = cred.expiresAtMs;
-  } else {
-    cred = { accessToken: acc.accessToken, refreshToken: '', expiresAtMs: Number(acc.expiresAtMs || 0) };
-  }
-  writeAuthStore(cred, acc.label || acc.email || '');
-  persistAccount(acc.label || acc.email || '', cred);
-  state.accounts.currentLabel = acc.label || acc.email || '';
-  saveStore();
-  log('rotasi akun -> ' + state.accounts.currentLabel);
-  return Object.assign({ label: state.accounts.currentLabel, agentId: acc.agentId }, cred);
-}
-
-// Rotasi tahan: coba akun target, kalau tokennya basi/refresh gagal, coba berikutnya.
-export async function rotateRobust(targetIndex) {
-  const chain = loadChain();
-  if (!chain.length) throw new Error('chain akun kosong');
-  const start = (typeof targetIndex === 'number' && targetIndex >= 0)
-    ? targetIndex % chain.length
-    : (state.accounts.currentIndex + 1) % chain.length;
-  for (let i = 0; i < chain.length; i++) {
-    const idx = (start + i) % chain.length;
-    const acc = chain[idx];
-    if (!eligible(acc)) continue;
-    let cred = null;
-    if (acc.accessToken && Number(acc.expiresAtMs || 0) - Date.now() > 5 * 60 * 1000) {
-      cred = { accessToken: acc.accessToken, refreshToken: acc.refreshToken, expiresAtMs: Number(acc.expiresAtMs) };
-    } else if (acc.refreshToken) {
-      try {
-        cred = await refreshOAuth(acc.refreshToken);
-      } catch (e) {
-        log('refresh gagal untuk ' + (acc.label || acc.email || '') + ': ' + String((e && e.message) || e).slice(0, 110));
-        continue;
-      }
-    } else {
-      continue;
-    }
-    state.accounts.currentIndex = idx;
-    state.accounts.currentLabel = acc.label || acc.email || '';
-    state.accounts.rotatedAt = Date.now();
-    acc.accessToken = cred.accessToken;
-    acc.refreshToken = cred.refreshToken;
-    acc.expiresAtMs = cred.expiresAtMs;
-    saveChain(chain);
-    saveStore();
-    writeAuthStore(cred, state.accounts.currentLabel);
-    log('rotasi akun -> ' + state.accounts.currentLabel);
-    return Object.assign({ label: state.accounts.currentLabel, agentId: acc.agentId }, cred);
-  }
-  throw new Error('tidak ada akun yang bisa dipakai (semua refresh token basi)');
-}
-
-function cloudHeaders(token, raw) {
-  const ts = String(Math.floor(Date.now() / 1000));
-  return {
-    Authorization: 'Bearer ' + token,
-    'x-timestamp': ts,
-    'x-signature': md5(ts + SALT + (raw || '')),
-    'Accept': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) Chrome/156.0.0.0 Safari/537.36',
-  };
-}
-
-export async function signinStatus(token) {
-  const url = CFG.mm.base + '/minimax-cloud/api/v1/signin/status?client=desktop&timezone_id=' + encodeURIComponent(CFG.timezone);
-  const res = await fetch(url, { headers: cloudHeaders(token) });
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error('signin/status HTTP ' + res.status);
-  const data = j.data || {};
-  const days = Array.isArray(data.days) ? data.days : [];
-  const today = days.find((d) => d.is_today) || null;
-  return { today, claimedToday: !!(today && today.status === 3), days };
-}
-
-export async function claimSignin(token) {
-  const body = '{}';
-  const url = CFG.mm.base + '/minimax-cloud/api/v1/signin/claim?client=desktop&timezone_id=' + encodeURIComponent(CFG.timezone);
-  const res = await fetch(url, { method: 'POST', headers: cloudHeaders(token, body), body });
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error('signin/claim HTTP ' + res.status);
-  const data = j.data || {};
-  return { claimResult: Number(data.claim_result || 0), points: Number(data.points || 0), dayNo: data.day_no };
-}
-
-export async function creditSummary(token) {
-  const url = CFG.mm.base + '/minimax-cloud/api/v1/credit/details?client=desktop';
-  const res = await fetch(url, { headers: cloudHeaders(token) });
-  const j = await res.json().catch(() => ({}));
-  const details = Array.isArray(j.details) ? j.details : [];
-  const remaining = details.reduce((sum, d) => sum + Number(d.remaining_amount || 0), 0);
-  const granted = details.reduce((sum, d) => sum + Number(d.granted_amount || 0), 0);
-  return { remaining, granted, entries: details.length };
-}
-
-// Klaim check-in harian untuk akun aktif (dipakai supervisor dan endpoint ops).
-export async function claimCheckin() {
-  const acc = currentAccount();
-  if (!acc || !acc.accessToken) throw new Error('akun aktif tidak punya access token');
-  const st = await signinStatus(acc.accessToken);
-  if (st.claimedToday) return { action: 'already-claimed', today: st.today };
-  const claim = await claimSignin(acc.accessToken);
-  log('check-in diklaim: claim_result=' + claim.claimResult + ' points=' + claim.points);
-  return { action: 'claimed', claimResult: claim.claimResult, points: claim.points, dayNo: claim.dayNo };
-}
-
-// Dipanggil saat turn gagal karena kredit habis: coba klaim check-in dulu, lalu rotasi.
-export async function handleCreditExhausted() {
-  const acc = currentAccount();
-  if (acc && acc.accessToken) {
-    try {
-      const st = await signinStatus(acc.accessToken);
-      if (!st.claimedToday) {
-        const claim = await claimSignin(acc.accessToken);
-        log('check-in harian diklaim, claim_result=' + claim.claimResult + ' points=' + claim.points);
-        if (claim.claimResult === 1 || claim.claimResult === 2) {
-          return { action: 'claimed', points: claim.points };
-        }
-      } else {
-        log('check-in hari ini sudah diklaim, kredit tetap habis -> rotasi');
-      }
-    } catch (e) {
-      log('gagal cek check-in: ' + String(e.message || e));
-    }
-  }
-  let rotated;
-  try {
-    rotated = await rotateRobust();
-  } catch (e) {
-    log('rotasi gagal: ' + String((e && e.message) || e).slice(0, 160));
-    return { action: 'rotate-failed', error: String((e && e.message) || e).slice(0, 200) };
-  }
-  return { action: 'rotated', label: rotated.label };
 }
