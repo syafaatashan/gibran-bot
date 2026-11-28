@@ -54,6 +54,13 @@ try {
 
 export const migrator = new SessionMigrator({ cloud, pool, log: (m) => log(String(m)) });
 
+// Fault injection untuk menguji jalur rotasi (hanya dinyalakan lewat /ops/lease).
+// 'credit' -> post ke sesi gagal seolah-olah kredit habis (meniru error 50110).
+const FAULTS = new Map();
+export function armFault(chatId, kind) { FAULTS.set(String(chatId), String(kind || 'credit')); }
+export function faultFor(chatId) { return FAULTS.get(String(chatId)) || ''; }
+export function clearFault(chatId) { FAULTS.delete(String(chatId)); }
+
 export function chainLabels() {
   return pool.labels();
 }
@@ -200,15 +207,19 @@ export function clearChatLease(chatId) {
 // Migrasi konteks: export histori (token akun PEMILIK) -> sesi baru di akun
 // tujuan -> inject brief + pesan lanjutan. Bukti: penanda dari akun A masuk ke
 // sesi akun B, dan A lalu ditolak di sesi baru.
-export async function migrateChatContext(chatId, oldLabel, newLabel, userText) {
+export async function migrateChatContext(chatId, oldLabel, newLabel, userText, contextBundle) {
   const lease = getSession(chatId) || {};
+  // Ekspor histori WAJIB pakai token akun PEMILIK sesi. Kalau label lease
+  // menyimpang dari owner (mis. lease dipaksa pindah akun), owner yang benar.
+  const owner = lease.owner || oldLabel;
   const r = await migrator.migrateViaHistory({
     sessionId: lease.sessionId,
-    oldLabel,
+    oldLabel: owner,
     newLabel,
     userText,
+    contextBundle,
   });
-  setChatLease(chatId, { label: newLabel, sessionId: r.newSessionId, agentId: '', migrated: true });
+  setChatLease(chatId, { label: newLabel, sessionId: r.newSessionId, agentId: '', owner: newLabel, migrated: true });
   return r;
 }
 

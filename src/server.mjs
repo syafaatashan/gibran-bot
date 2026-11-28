@@ -7,6 +7,7 @@ import {
   ensureAccount, handleCreditExhausted, chainLabels, currentAccount,
   rotate, rotateRobust, creditSummary, signinStatus, claimCheckin, importChainFromEnv, mergeChainFromBody,
   leaseForChat, setChatLease, clearChatLease, migrateChatContext, tokenForLabel, agentIdForLabel,
+  armFault, clearFault, faultFor,
 } from './supervisor.mjs';
 import { runExec } from './mcode.mjs';
 import {
@@ -153,6 +154,9 @@ async function handleCloudAgent(msg) {
   }
   busy.set(key, true);
   const stopTyping = await keepTyping(chatId);
+  // Deklarasi di luar try: finally tidak bisa melihat variabel di dalam blok try.
+  let path = 'direct';
+  let recorded = false;
   try {
     // 1) lease: chat -> {label akun, sessionId}. Sesi milik akun pembuatnya.
     const lease = leaseForChat(key);
@@ -164,13 +168,20 @@ async function handleCloudAgent(msg) {
       label = acc.label;
       sid = await cloudCreateSession(acc.agentId, 'gibran-bot-' + key, acc.accessToken);
       first = true;
-      setChatLease(key, { label, sessionId: sid, agentId: acc.agentId, mode: 'cloud' });
+      setChatLease(key, { label, sessionId: sid, agentId: acc.agentId, owner: label, mode: 'cloud' });
     }
     const content = first
       ? CONTEXT + '\n\n---\n\n# PESAN PENGGUNA PERTAMA (Telegram)\n\n' + text
       : text;
     let reply = '';
     try {
+      // Fault injection (hanya aktif lewat /ops/lease) untuk menguji rotasi kredit.
+      const injected = faultFor(key);
+      if (injected) {
+        const fe = new Error('fault injection: ' + injected);
+        fe.kind = injected === 'credit' ? ERR.CREDIT : ERR.OWNERSHIP;
+        throw fe;
+      }
       const token = await tokenForLabel(label);
       const out = await cloudPost(sid, content, { token, sender: { agent_name: await agentIdForLabel(label) } });
       reply = (out && out.text) || '';
@@ -193,20 +204,30 @@ async function handleCloudAgent(msg) {
       // b) masih gagal -> rotasi akun + pindahkan konteks (export -> sesi baru -> inject)
       if (!reply) {
         const next = await rotateRobust();
-        const r = await migrateChatContext(key, label, next.label, content);
+        const r = await migrateChatContext(key, label, next.label, content, CONTEXT);
         reply = (r && r.reply) || '';
+        path = 'migrated';
         log('konteks dipindah ' + label + ' -> ' + next.label + ' (' + r.exportedCount + ' pesan, brief ' + r.briefChars + ' char)');
       }
     }
+    setChatLease(key, {
+      lastReply: String(reply || '').slice(0, 900),
+      lastReplyAt: Date.now(),
+      lastPath: path,
+    });
+    recorded = true;
     await sendMessage(chatId, (reply || '').trim() || 'Maaf, jawaban kosong. Coba ulangi ya.');
   } catch (e) {
     lastError.message = String((e && e.message) || e).slice(0, 400);
     lastError.at = Date.now();
+    path = 'error';
     log('ERROR cloud chat ' + key + ': ' + lastError.message);
     try {
       await sendMessage(chatId, '⚠️ Gagal memproses: ' + lastError.message.slice(0, 200));
     } catch { /* abaikan */ }
   } finally {
+    clearFault(key);
+    if (!recorded) { try { setChatLease(key, { lastPath: path }); } catch { /* abaikan */ } }
     stopTyping();
     busy.delete(key);
   }
@@ -342,6 +363,48 @@ const server = http.createServer((req, res) => {
         try {
           const r = await rotateRobust(typeof body.index === 'number' ? body.index : undefined);
           return send(res, 200, { ok: true, current: r.label, agentId: r.agentId, chain: chainLabels() });
+        } catch (e) {
+          return send(res, 500, { ok: false, error: String((e && e.message) || e).slice(0, 250) });
+        }
+      })();
+    });
+    return undefined;
+  }
+
+  // Hook uji: paksa lease chat ke akun lain / nyala fault kredit.
+  // Dipakai untuk membuktikan rotasi akun tanpa kehilangan konteks.
+  if (req.method === 'POST' && p === '/ops/lease') {
+    if (!opsOk(req)) return send(res, 401, { ok: false, error: 'token ops salah' });
+    let raw = '';
+    req.on('data', (c) => { raw += c; });
+    req.on('end', () => {
+      let body = {};
+      try { body = JSON.parse(raw || '{}'); } catch { /* abaikan */ }
+      (async () => {
+        try {
+          const chatId = String(body.chatId || '').trim();
+          if (!chatId) return send(res, 400, { ok: false, error: 'chatId wajib' });
+          if (body.clear) {
+            clearChatLease(chatId);
+            clearFault(chatId);
+            return send(res, 200, { ok: true, cleared: true, chatId });
+          }
+          if (body.fault) armFault(chatId, String(body.fault));
+          else if (body.clearFault) clearFault(chatId);
+          const patch = {};
+          if (body.label) patch.label = String(body.label);
+          if (body.sessionId) patch.sessionId = String(body.sessionId);
+          if (body.owner) patch.owner = String(body.owner);
+          if (body.agentId) patch.agentId = String(body.agentId);
+          if (Object.keys(patch).length) setChatLease(chatId, patch);
+          return send(res, 200, {
+            ok: true,
+            chatId,
+            lease: leaseForChat(chatId),
+            fault: faultFor(chatId),
+            poolCurrent: state.accounts.currentLabel,
+            chainSize: chainLabels().length,
+          });
         } catch (e) {
           return send(res, 500, { ok: false, error: String((e && e.message) || e).slice(0, 250) });
         }

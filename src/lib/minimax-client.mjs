@@ -187,10 +187,12 @@ export class MiniMaxCloud {
       e.status = res.status; e.kind = classifyError(res.status, t); e.body = t;
       throw e;
     }
-    let buf = ''; let streamed = ''; let final = ''; let turnId = ''; const frames = [];
+    let buf = ''; let rawAll = ''; let streamed = ''; let final = ''; let turnId = ''; const frames = [];
     const dec = new TextDecoder();
     for await (const chunk of res.body) {
-      buf += dec.decode(chunk, { stream: true });
+      const piece = dec.decode(chunk, { stream: true });
+      rawAll += piece;
+      buf += piece;
       let idx;
       while ((idx = buf.indexOf('\n')) >= 0) {
         const line = buf.slice(0, idx).trim(); buf = buf.slice(idx + 1);
@@ -210,6 +212,24 @@ export class MiniMaxCloud {
           if (o.agent_message.turn_id) turnId = String(o.agent_message.turn_id);
         }
         if (o.turn_id) turnId = String(o.turn_id);
+      }
+    }
+    // Server kadang membalas JSON biasa (bukan SSE) berisi base_resp error, mis.
+    // sesi dimiliki akun lain (1406010061) atau kredit habis. Tanpa cek ini
+    // error hilang diam-diam dan jawabannya kosong tanpa rotasi.
+    if (!frames.length) {
+      const trimmed = rawAll.trim();
+      if (trimmed && !trimmed.startsWith('data:')) {
+        let j = null;
+        try { j = JSON.parse(trimmed); } catch { j = null; }
+        if (j && baseStatus(j) !== 0) {
+          const e = new Error('MM POST message base_resp ' + baseStatus(j) + ' ' + baseMessage(j));
+          e.kind = classifyError(200, trimmed);
+          e.baseCode = baseStatus(j);
+          e.baseMsg = baseMessage(j);
+          e.body = j;
+          throw e;
+        }
       }
     }
     return { text: (final || streamed).trim(), streamed: streamed.trim(), turnId, frameTypes: frames.map((f) => f && f.type) };

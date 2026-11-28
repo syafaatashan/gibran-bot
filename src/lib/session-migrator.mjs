@@ -69,16 +69,20 @@ export class SessionMigrator {
   }
 
   // --- Pola utama: export -> sesi baru di akun tujuan -> inject ---
-  async migrateViaHistory({ sessionId, oldLabel, newLabel, userText, marker }) {
+  async migrateViaHistory({ sessionId, oldLabel, newLabel, userText, marker, contextBundle }) {
     const oldToken = await this.pool.tokenFor(oldLabel);
     const newToken = await this.pool.tokenFor(newLabel);
     const newAgentId = await this.pool.agentIdFor(newLabel);
     const messages = await this.exportHistory(sessionId, oldToken);
     const brief = this.buildBrief(messages, { marker });
     const newSessionId = await this.cloud.createSession(newAgentId, 'migrasi-' + oldLabel + '-' + Date.now(), newToken);
-    const content = brief
-      ? brief + (userText ? '# PESAN LANJUTAN PENGGUNA\n' + userText : '')
-      : (userText || 'Lanjutkan percakapan.');
+    // Sesi baru = sesi agen baru: instruksi (persona + skill) harus ikut inject,
+    // kalau tidak persona/skill hilang begitu akun rotasi.
+    const parts = [];
+    if (contextBundle) parts.push(contextBundle);
+    if (brief) parts.push(brief);
+    if (userText) parts.push('# PESAN LANJUTAN PENGGUNA\n' + userText);
+    const content = parts.length ? parts.join('\n\n') : 'Lanjutkan percakapan.';
     const out = await this.cloud.postMessage(newSessionId, content, {
       sender: { agent_name: newAgentId }, token: newToken, timeoutMs: 600000,
     });
