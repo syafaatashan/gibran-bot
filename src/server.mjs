@@ -187,9 +187,20 @@ async function handleCloudAgent(msg) {
       reply = (out && out.text) || '';
     } catch (e) {
       const kind = e && e.kind;
-      if (kind !== ERR.OWNERSHIP && kind !== ERR.CREDIT && kind !== ERR.AUTH) throw e;
+      if (kind !== ERR.OWNERSHIP && kind !== ERR.CREDIT && kind !== ERR.AUTH && kind !== ERR.SESSION_BUSY) throw e;
       log('turn gagal (' + kind + ') -> check-in / rotasi / migrasi konteks');
       let rotatedLabel = '';
+      // Sesi macet (turn lama masih jalan / sesi dari deploy sebelumnya):
+      // buat sesi BARU di akun yang sama dan pindahkan konteks. Akun tidak
+      // perlu diganti, jadi tidak ada rotasi kredit.
+      if (kind === ERR.SESSION_BUSY) {
+        const r = await migrateChatContext(key, label, label, content, CONTEXT);
+        reply = (r && r.reply) || '';
+        path = 'resumed';
+        log('sesi tidak idle -> sesi baru ' + r.newSessionId + ' di ' + label
+          + ' (' + r.exportedCount + ' pesan, brief ' + r.briefChars + ' char)');
+        try { await cloudApi('/minimax-cloud/api/v1/session/' + encodeURIComponent(sid) + '/archive', { method: 'POST', token: await tokenForLabel(label) }); } catch { /* abaikan */ }
+      }
       // a) kredit habis -> klaim check-in harian lalu ulangi di akun yang sama
       if (kind === ERR.CREDIT) {
         const act = await handleCreditExhausted();

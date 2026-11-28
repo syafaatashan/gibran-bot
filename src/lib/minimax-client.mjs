@@ -16,6 +16,7 @@ export const ERR = {
   CREDIT: 'credit_exhausted',
   AUTH: 'auth_invalid',
   OWNERSHIP: 'session_ownership_denied',
+  SESSION_BUSY: 'session_not_idle',
   RATE: 'rate_limited',
   HTTP: 'http_error',
 };
@@ -68,6 +69,7 @@ export function classifyError(status, body) {
   const txt = typeof body === 'string' ? body : JSON.stringify(body || {});
   if (status === 401 || /invalid access token|token expired|unauthorized/i.test(txt)) return ERR.AUTH;
   if (/1406010061/i.test(txt) || /session ownership denied/i.test(txt)) return ERR.OWNERSHIP;
+  if (/1406010091/i.test(txt) || /session[_ ]not[_ ]idle/i.test(txt)) return ERR.SESSION_BUSY;
   if (/50110|insufficient balance|1008/i.test(txt)) return ERR.CREDIT;
   if (status === 429) return ERR.RATE;
   return ERR.HTTP;
@@ -158,6 +160,15 @@ export class MiniMaxCloud {
     const sid = j && (j.session_id ?? j.sessionId ?? j.data?.session_id);
     if (!sid) { const e = new Error('createSession tanpa session_id: ' + JSON.stringify(redact(j)).slice(0, 200)); e.kind = ERR.HTTP; throw e; }
     return String(sid);
+  }
+  // Akhiri/arsipkan sesi (best effort). Dipakai saat sesi macet dengan turn aktif.
+  async archiveSession(sid, token) {
+    try {
+      await this.req({ method: 'POST', path: '/minimax-cloud/api/v1/session/' + encodeURIComponent(sid) + '/archive', token });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String((e && e.message) || e).slice(0, 140) };
+    }
   }
   async getSession(sid, token) {
     return this.req({ method: 'GET', path: '/minimax-cloud/api/v1/session/' + encodeURIComponent(sid), token });

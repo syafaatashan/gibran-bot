@@ -69,11 +69,25 @@ export class SessionMigrator {
   }
 
   // --- Pola utama: export -> sesi baru di akun tujuan -> inject ---
-  async migrateViaHistory({ sessionId, oldLabel, newLabel, userText, marker, contextBundle }) {
-    const oldToken = await this.pool.tokenFor(oldLabel);
+  async migrateViaHistory({ sessionId, oldLabel, newLabel, userText, marker, contextBundle, fallbackLabel }) {
     const newToken = await this.pool.tokenFor(newLabel);
     const newAgentId = await this.pool.agentIdFor(newLabel);
-    const messages = await this.exportHistory(sessionId, oldToken);
+    // Ekspor histori: coba akun owner lalu akun cadangan. Kalau tidak ada yang
+    // bisa (mis. akun owner mati), tetap lanjut tanpa brief supaya chat tidak mati.
+    let messages = [];
+    let exportError = '';
+    const candidates = [oldLabel, fallbackLabel].filter((v, i, a) => v && a.indexOf(v) === i);
+    for (const label of candidates) {
+      try {
+        const tok = await this.pool.tokenFor(label);
+        messages = await this.exportHistory(sessionId, tok);
+        exportError = '';
+        break;
+      } catch (e) {
+        exportError = String((e && e.message) || e).slice(0, 160);
+        this.log('ekspor histori via ' + label + ' gagal: ' + exportError);
+      }
+    }
     const brief = this.buildBrief(messages, { marker });
     const newSessionId = await this.cloud.createSession(newAgentId, 'migrasi-' + oldLabel + '-' + Date.now(), newToken);
     // Sesi baru = sesi agen baru: instruksi (persona + skill) harus ikut inject,
@@ -95,6 +109,8 @@ export class SessionMigrator {
       exportedCount: messages.length,
       briefChars: brief.length,
       reply: out.text,
+      exportError,
+      contextLost: messages.length === 0,
     };
   }
 

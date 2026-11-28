@@ -219,32 +219,20 @@ export async function migrateChatContext(chatId, oldLabel, newLabel, userText, c
   // Ekspor histori WAJIB pakai token akun PEMILIK sesi. Kalau label lease
   // menyimpang dari owner (mis. lease dipaksa pindah akun), owner yang benar.
   const owner = lease.owner || oldLabel;
-  let r;
-  try {
-    r = await migrator.migrateViaHistory({
-      sessionId: lease.sessionId,
-      oldLabel: owner,
-      newLabel,
-      userText,
-      contextBundle,
-    });
-  } catch (e) {
-    // Owner yang tercatat ternyata bukan pemilik sesi: coba pakai label yang
-    // dipakai untuk post (fallback terakhir sebelum menyerah).
-    if (e && e.kind === ERR.OWNERSHIP && owner !== oldLabel) {
-      log('ekspor dari owner ' + owner + ' ditolak -> fallback ke ' + oldLabel);
-      r = await migrator.migrateViaHistory({
-        sessionId: lease.sessionId,
-        oldLabel,
-        newLabel,
-        userText,
-        contextBundle,
-      });
-    } else {
-      throw e;
-    }
-  }
-  setChatLease(chatId, { label: newLabel, sessionId: r.newSessionId, agentId: '', owner: newLabel, migrated: true });
+  // Migrator mencoba ekspor lewat owner lalu akun cadangan; kalau tidak ada
+  // yang bisa (akun owner mati), dia tetap lanjut tanpa brief (contextLost).
+  const r = await migrator.migrateViaHistory({
+    sessionId: lease.sessionId,
+    oldLabel: owner,
+    fallbackLabel: owner !== oldLabel ? oldLabel : '',
+    newLabel,
+    userText,
+    contextBundle,
+  });
+  setChatLease(chatId, {
+    label: newLabel, sessionId: r.newSessionId, agentId: '', owner: newLabel,
+    migrated: true, contextLost: !!r.contextLost,
+  });
   return r;
 }
 
