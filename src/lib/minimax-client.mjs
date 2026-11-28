@@ -283,12 +283,19 @@ export class MiniMaxCloud {
   }
 }
 
-export async function refreshOAuth({ tokenUrl, clientId, scope, audience, refreshToken }) {
+export async function refreshOAuth({ tokenUrl, clientId, scope, audience, refreshToken, timeoutMs = 20000 }) {
   const body = new URLSearchParams({
     grant_type: 'refresh_token', refresh_token: refreshToken,
     client_id: clientId, scope, audience,
   });
-  const res = await fetch(tokenUrl, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'MiniMax Code/3.1.17' }, body });
+  // Timeout WAJIB: refresh yang menggantung akan membekukan giliran bot
+  // (rotasi BERHENTI di akun itu, chat jadi macet).
+  const res = await fetch(tokenUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'MiniMax Code/3.1.17' },
+    body,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
   const txt = await res.text();
   let t = {}; try { t = JSON.parse(txt); } catch { /* biarkan */ }
   if (!res.ok || !t.access_token) {

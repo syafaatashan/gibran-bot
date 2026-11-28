@@ -477,6 +477,35 @@ const server = http.createServer((req, res) => {
     return undefined;
   }
 
+  // Diagnostik egress: cek host yang dipakai bot (cloud API + OAuth).
+  if (req.method === 'GET' && p === '/ops/netcheck') {
+    if (!opsOk(req)) return send(res, 401, { ok: false, error: 'token ops salah' });
+    return (async () => {
+      const targets = [
+        { name: 'cloud-api', url: CFG.mm.base + '/minimax-cloud/api/v1/agent' },
+        { name: 'oauth', url: CFG.mm.tokenUrl },
+      ];
+      const results = [];
+      for (const t of targets) {
+        const t0 = Date.now();
+        try {
+          const res = await fetch(t.url, {
+            method: 'GET',
+            signal: AbortSignal.timeout(15000),
+            headers: { 'user-agent': 'gibran-bot-netcheck' },
+          });
+          results.push({ name: t.name, host: new URL(t.url).host, status: res.status, ms: Date.now() - t0 });
+        } catch (e) {
+          results.push({
+            name: t.name, host: new URL(t.url).host,
+            error: String((e && e.message) || e).slice(0, 160), ms: Date.now() - t0,
+          });
+        }
+      }
+      return send(res, 200, { ok: true, results });
+    })();
+  }
+
   if (req.method === 'GET' && p === '/ops/webhook') {
     if (!opsOk(req)) return send(res, 401, { ok: false, error: 'token ops salah' });
     return (async () => {
