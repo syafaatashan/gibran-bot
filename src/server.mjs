@@ -339,6 +339,17 @@ async function cloudTurn(chatId, text) {
 // Format jawaban, kirim ke Telegram, lalu berkas dan frame browser.
 async function deliverTurn(chatId, text) {
   const key = String(chatId);
+  // Relay frame harus hidup SEBELUM giliran, supaya user melihat browser
+  // cloud bergerak saat agen bekerja (bukan baru setelah giliran selesai).
+  if (orch.needsBrowser(text)) {
+    try {
+      const lease = leaseForChat(key);
+      const label = (lease && lease.label) || (currentAccount() || {}).label;
+      if (label) await frameRelay.start(key, await tokenForLabel(label));
+    } catch (e) {
+      log('gagal nyalakan relay frame: ' + String((e && e.message) || e).slice(0, 120));
+    }
+  }
   const r = await cloudTurn(chatId, text);
   const formatted = formatAnswer(r.reply);
   const body = (formatted.text || '').trim() || 'Maaf, jawaban kosong. Coba ulangi ya.';
