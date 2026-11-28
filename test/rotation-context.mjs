@@ -14,11 +14,12 @@ import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve('E:/Minimax Code/Minimax-Cloud/bot-workspaces/deploy/gibran-bot-src');
-const POOL = path.resolve('E:/Minimax Code/Minimax-Cloud/bot-workspaces/deploy/gibran-bot/accounts-full.json');
+// Slice aman: indeks >= 1000, tidak dipakai container produksi (refresh token single-use).
+const POOL = path.resolve('E:/Minimax Code/Minimax-Cloud/bot-workspaces/deploy/gibran-bot/accounts-slice.json');
 const imp = (p) => import(pathToFileURL(p).href);
 
 process.env.MINIMAX_DATA_DIR = process.env.MINIMAX_DATA_DIR
-  || path.resolve('E:/Minimax Code/Minimax-Cloud/bot-workspaces/deploy/relay-1900/data/int-test');
+  || path.resolve('E:/Minimax Code/Minimax-Cloud/bot-workspaces/deploy/relay-1900/data/int-slice');
 process.env.ACCOUNTS_SEED_FILE = POOL;
 process.env.BOT_MODE = 'cloud-agent';
 process.env.PORT = '18099';

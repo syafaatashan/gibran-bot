@@ -5,10 +5,11 @@ import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve('E:/Minimax Code/Minimax-Cloud/bot-workspaces/deploy/gibran-bot-src');
-const POOL = path.resolve('E:/Minimax Code/Minimax-Cloud/bot-workspaces/deploy/gibran-bot/accounts-full.json');
+// Slice aman: indeks >= 1000, tidak dipakai container produksi (refresh token single-use).
+const POOL = path.resolve('E:/Minimax Code/Minimax-Cloud/bot-workspaces/deploy/gibran-bot/accounts-slice.json');
 const imp = (p) => import(pathToFileURL(p).href);
 
-process.env.MINIMAX_DATA_DIR = process.env.MINIMAX_DATA_DIR || path.resolve('E:/Minimax Code/Minimax-Cloud/bot-workspaces/deploy/relay-1900/data/int-test');
+process.env.MINIMAX_DATA_DIR = process.env.MINIMAX_DATA_DIR || path.resolve('E:/Minimax Code/Minimax-Cloud/bot-workspaces/deploy/relay-1900/data/int-slice');
 process.env.ACCOUNTS_SEED_FILE = POOL;
 fs.mkdirSync(process.env.MINIMAX_DATA_DIR, { recursive: true });
 
@@ -24,7 +25,7 @@ function check(name, ok, detail) {
 }
 
 console.log('chain:', chainLabels().length, 'akun');
-check('IT1 pool termuat', pool.size() > 1000, pool.size() + ' akun');
+check('IT1 pool termuat', pool.size() > 300, pool.size() + ' akun (slice aman index >= 1000)');
 
 const acc = await ensureAccount();
 check('IT2 akun aktif siap', !!(acc.label && acc.accessToken && acc.agentId), acc.label + ' agent ' + acc.agentId);
