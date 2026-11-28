@@ -153,12 +153,30 @@ export async function ensureAccount() {
   return Object.assign({ label: acc.label, agentId: acc.agentId }, cred);
 }
 
+function eligible(acc) {
+  // Akun pool hanya bisa dipakai di mode cloud-agent. Mode runtime-local butuh
+  // akun yang sudah sign-in penuh (content review auth), ditandai runtime: true.
+  if (CFG.mode !== 'runtime-local') return true;
+  return acc.runtime !== false;
+}
+
 export async function rotate(targetIndex) {
   const chain = loadChain();
   if (!chain.length) throw new Error('chain akun kosong');
-  const next = (typeof targetIndex === 'number' && targetIndex >= 0)
-    ? targetIndex % chain.length
-    : (state.accounts.currentIndex + 1) % chain.length;
+  let next;
+  if (typeof targetIndex === 'number' && targetIndex >= 0) {
+    next = targetIndex % chain.length;
+  } else {
+    next = (state.accounts.currentIndex + 1) % chain.length;
+    for (let i = 0; i < chain.length && !eligible(chain[next]); i++) {
+      next = (next + 1) % chain.length;
+    }
+    if (!eligible(chain[next])) {
+      // Tidak ada akun runtime lain: tetap di akun sekarang (check-in sudah dicoba).
+      next = state.accounts.currentIndex >= 0 ? state.accounts.currentIndex : 0;
+      log('tidak ada akun runtime lain yang eligible, tetap di akun sekarang');
+    }
+  }
   state.accounts.currentIndex = next;
   state.accounts.rotatedAt = Date.now();
   saveStore();

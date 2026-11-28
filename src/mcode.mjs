@@ -11,7 +11,9 @@ export function isCreditError(text) {
 
 export function isAuthError(text) {
   const t = String(text || '');
-  return /401|unauthorized|invalid token|token expired/i.test(t);
+  return /401|unauthorized|invalid token|token expired/i.test(t)
+    || /content review authentication expired/i.test(t)
+    || /sign in again/i.test(t);
 }
 
 function buildArgs(opts) {
