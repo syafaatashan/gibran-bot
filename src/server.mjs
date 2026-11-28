@@ -73,6 +73,7 @@ async function handleRuntimeLocal(msg) {
     const prev = getSession(key);
     const sent = await sendMessage(chatId, '⏳ Sedang bekerja...');
     placeholderId = sent[0] || null;
+    log('turn mulai untuk chat ' + key + ' (placeholder=' + placeholderId + ')');
     let result = null;
     for (let attempt = 1; attempt <= CFG.maxAttempts; attempt++) {
       result = await runExec({
@@ -158,6 +159,7 @@ async function handleCloudAgent(msg) {
 }
 
 async function handleUpdate(update) {
+  log('handleUpdate dipanggil, message=' + !!(update && update.message));
   if (!update || !update.message) return;
   const msg = update.message;
   const text = String(msg.text || '').trim();
@@ -333,7 +335,9 @@ const server = http.createServer((req, res) => {
     });
     req.on('end', () => {
       let update = {};
-      try { update = JSON.parse(raw || '{}'); } catch { /* abaikan */ }
+      let parseError = '';
+      try { update = JSON.parse(raw || '{}'); } catch (e) { parseError = String((e && e.message) || e); }
+      log('webhook masuk: ' + raw.length + ' byte, parse=' + (parseError ? 'GAGAL ' + parseError : 'ok') + ', adaMessage=' + !!update.message);
       handleUpdate(update).catch((e) => log('handleUpdate error: ' + String((e && e.message) || e)));
       return send(res, 200, { ok: true });
     });
