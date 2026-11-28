@@ -1,4 +1,4 @@
-_prep.py
+node_modules
 *.log
+.env
 secrets.yaml
-service.yaml

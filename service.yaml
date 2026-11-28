@@ -1,0 +1,33 @@
+name: gibran-bot
+description: Gibran.ai - bot Telegram webhook dengan otak MiniMax Code Cloud agent
+billing:
+  deploymentPlan: nf-compute-20
+vcsData:
+  projectUrl: https://github.com/syafaatashan/gibran-bot
+  projectType: github
+  projectBranch: master
+buildSettings:
+  dockerfile:
+    buildEngine: buildkit
+    dockerFilePath: /Dockerfile
+    dockerWorkDir: /
+  storage:
+    ephemeralStorage:
+      storageSize: 16384
+deployment:
+  instances: 1
+  storage:
+    ephemeralStorage:
+      storageSize: 2048
+ports:
+- name: http
+  internalPort: 8080
+  public: true
+  protocol: HTTP
+runtimeEnvironment:
+  NODE_ENV: production
+  PORT: '8080'
+  BOT_DATA_DIR: /data
+  TELEGRAM_WEBHOOK_PATH: /tg/webhook
+  PUBLIC_BASE_URL: https://lb.686e8db5561d701a95e205d8.northflank.com
+  MM_TURN_TIMEOUT_MS: '900000'

@@ -1,6 +1,9 @@
-node_modules
 .git
-.next
+.gitignore
+node_modules
+npm-debug.log
 *.log
-backups
-context
+*.pid
+_spec*.py
+.env
+docs

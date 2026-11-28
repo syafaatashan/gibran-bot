@@ -1,59 +1,60 @@
-# Gibran.ai - Worker Bot Telegram (Northflank)
+# Gibran.ai - bot Telegram (webhook)
 
-Bot Telegram publik untuk bantu pelamar kerja: buat CV, cari lowongan, cocokkan CV dengan job, dan apply.
-Seluruh intelligence memakai skill /get-a-job (agent Gibran.ai).
+Bot Telegram publik yang membantu pelamar kerja: membuat CV, mencari lowongan,
+mencocokkan CV dengan lowongan, dan apply. Otaknya berjalan di MiniMax Code Cloud runtime.
 
 ## Arsitektur
 
 ```
-Telegram  ->  MCode CLI (runtime yg sama dgn desktop)  ->  agent gibran-ai -> skill /get-a-job
-                     |
-                     +-- TelegramPoller (channel Telegram, mode sdk)
-                     +-- session channel per-sender (sessionStrategy: per-sender)
+Pengguna Telegram
+   -> POST https://<host>/tg/webhook        (Telegram Bot API webhook)
+   -> bot Node.js (service gibran-bot, Northflank)
+        1. POST /minimax-cloud/api/v1/agent/{agentId}/session   -> buat sesi cloud
+        2. POST /minimax-cloud/api/v1/session/{id}/message       -> SSE:
+           isi = persona + skill get-a-job + pesan pengguna
+        3. event type=6 (chunk msg_content) + type=2 (pesan final) -> teks jawaban
+   -> sendMessage ke Telegram
 ```
 
-Container ini menjalankan `mcode` di dalam tmux (butuh TTY) dengan supervisor loop,
-sehingga bot hidup 24/7 dan auto-restart bila proses mati.
+Service bisa hidup 24/7 di Northflank tanpa MCode Desktop, karena otaknya
+dieksekusi di cloud MiniMax, bukan di dalam container.
 
-Konfigurasi runtime (auth store, telegram-channel.yaml, channel-bindings.yaml, channel-routes.yaml)
-dibuat saat start dari environment variable - token TIDAK PERNAH ada di dalam image atau git.
+## Endpoint
 
-## Secret yang dibutuhkan (Northflank secret group)
+| Method | Path | Keterangan |
+| --- | --- | --- |
+| GET | `/health` | liveness, status token, jumlah chat |
+| GET | `/ready` | cek koneksi ke MiniMax Cloud + Telegram |
+| POST | `/tg/webhook` | endpoint webhook Telegram (header `x-telegram-bot-api-secret-token`) |
+| POST | `/ops/set-webhook` | daftar webhook ke Telegram (header `x-ops-token`) |
+| GET | `/ops/webhook` | lihat status webhook di sisi Telegram |
+| GET | `/ops/sessions` | peta chat_id ke sessionId cloud |
 
-| Key | Isi |
-|---|---|
-| TELEGRAM_BOT_TOKEN | token bot Telegram |
-| TELEGRAM_BOT_NAME | nama tampilan bot (opsional) |
-| MCODE_ACCESS_TOKEN | OAuth access token akun MiniMax (mmoat_...) |
-| MCODE_REFRESH_TOKEN | OAuth refresh token (mmort_...) |
-| MCODE_AUTH_EXPIRES_AT_MS | epoch ms masa berlaku access token |
+## Environment
 
-## Deployment (Northflank CLI)
+| Nama | Isi |
+| --- | --- |
+| `TELEGRAM_BOT_TOKEN` | token bot dari BotFather |
+| `TELEGRAM_WEBHOOK_SECRET` | secret token header webhook |
+| `MM_AGENT_ID` | nama agent cloud milik akun bot |
+| `MM_ACCESS_TOKEN` / `MM_REFRESH_TOKEN` | kredensial OAuth akun bot (bootstrap) |
+| `MM_AUTH_EXPIRES_AT_MS` | masa berlaku access token awal |
+| `MM_CLOUD_BASE` | `https://agent.minimax.io` |
+| `MM_TOKEN_URL` | `https://account.minimax.io/oauth2/token` |
+| `MM_SALT` | salt tanda tangan `x-signature` |
+| `MM_CLIENT_ID` | `mcode-public` |
+| `MM_SCOPE` / `MM_AUDIENCE` | `agent.default` / `agent-backend` |
+| `PUBLIC_BASE_URL` | URL publik service (untuk mendaftarkan webhook) |
+| `OPS_TOKEN` | token admin untuk endpoint `/ops/*` |
+| `BOT_DATA_DIR` | volume untuk state (token + peta sesi) |
 
-```bash
-# 1. secret group
-northflank create secret --projectId gibran-ai --file ./secrets.yaml
+## Catatan operasional
 
-# 2. service (build dari Git)
-northflank create service combined --projectId gibran-ai --file ./service.yaml
-
-# 3. verifikasi
-northflank get service --projectId gibran-ai --serviceId gibran-bot
-northflank get service logs --projectId gibran-ai --serviceId gibran-bot -f
-```
-
-## Biaya (perkiraan)
-
-| Item | Plan | Biaya |
-|---|---|---|
-| Service | nf-compute-200 (2 vCPU / 4 GB) | ~$48/bulan |
-| Build | default nf-compute-400-16 | ~$144 per build |
-| Volume /workspace (opsional) | storage | kecil, per GB/bulan |
-
-## Catatan penting
-
-- SATU bot token hanya boleh dipoll SATU runtime. Setelah service ini jalan, matikan binding
-  Telegram di laptop (desktop) agar tidak terjadi 409 Conflict.
-- Workspace per pengguna: /workspace/users/<user_key>/Get a Job (user_key = id chat Telegram).
-- Volume /workspace dipakai agar data pengguna bertahan saat container restart.
-- Logs: /root/.minimax/bot.log di dalam container (juga di stdout service).
+- **Refresh token bersifat single-use.** Setelah bot me-refresh, token baru disimpan di
+  `/data/state.json` dan env tidak lagi dipakai. Jangan memakai kredensial yang sama
+  di runtime lain (desktop/laptop), atau keduanya saling membatalkan refresh.
+- Sesi cloud disimpan per `chat_id` di `/data/state.json`, jadi percakapan berlanjut
+  antar restart.
+- Skill `get-a-job` dan persona `gibran-ai` dibundel di image dan disuntik sebagai
+  pesan pertama setiap sesi baru.
+- `secrets.yaml` sengaja tidak ada di repo: simpan di luar git.

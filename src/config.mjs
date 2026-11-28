@@ -1,0 +1,27 @@
+export const CFG = {
+  port: Number(process.env.PORT || 8080),
+  dataDir: process.env.BOT_DATA_DIR || '/data',
+  opsToken: process.env.OPS_TOKEN || '',
+  publicUrl: (process.env.PUBLIC_BASE_URL || '').replace(/\/+$/, ''),
+  telegram: {
+    token: process.env.TELEGRAM_BOT_TOKEN || '',
+    webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || '',
+    webhookPath: process.env.TELEGRAM_WEBHOOK_PATH || '/tg/webhook',
+    maxChars: Number(process.env.TELEGRAM_MAX_CHARS || 3900),
+  },
+  mm: {
+    base: (process.env.MM_CLOUD_BASE || 'https://agent.minimax.io').replace(/\/+$/, ''),
+    agentId: process.env.MM_AGENT_ID || '',
+    clientId: process.env.MM_CLIENT_ID || 'mcode-public',
+    scope: process.env.MM_SCOPE || 'agent.default',
+    audience: process.env.MM_AUDIENCE || 'agent-backend',
+    tokenUrl: process.env.MM_TOKEN_URL || 'https://account.minimax.io/oauth2/token',
+    salt: process.env.MM_SALT || 'I*7Cf%WZ#S&%1RlZJ&C2',
+    accessToken: process.env.MM_ACCESS_TOKEN || '',
+    refreshToken: process.env.MM_REFRESH_TOKEN || '',
+    expiresAtMs: Number(process.env.MM_AUTH_EXPIRES_AT_MS || 0),
+    turnTimeoutMs: Number(process.env.MM_TURN_TIMEOUT_MS || 900000),
+  },
+  skillDir: process.env.BOT_SKILL_DIR || '/app/skill/get-a-job',
+  personaFile: process.env.BOT_PERSONA_FILE || '/app/agent/gibran-ai/agent.md',
+};
