@@ -113,6 +113,8 @@ export async function runExec(opts) {
     creditError: isCreditError(combined),
     authError: isAuthError(combined),
     stderr: res.stderr.slice(-2000),
+    rawStdout: res.stdout.slice(-8000),
+    events: res.events.slice(-40),
     durationMs: Date.now() - started,
   };
 }

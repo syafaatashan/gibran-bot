@@ -273,6 +273,8 @@ const server = http.createServer((req, res) => {
             creditError: r.creditError,
             authError: r.authError,
             stderr: String(r.stderr || '').slice(-800),
+            rawStdout: String(r.rawStdout || '').slice(-4000),
+            events: r.events || [],
             durationMs: r.durationMs,
           });
         } catch (e) {
