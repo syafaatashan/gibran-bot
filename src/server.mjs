@@ -255,7 +255,7 @@ async function cloudTurn(chatId, text) {
     // Akun sticky per user: memisahkan memori agen antar pengguna.
     let acc = null;
     try {
-      const sticky = assignStickyAccount(key, { pool });
+      const sticky = await assignStickyAccount(key, { pool });
       acc = { label: sticky.label, agentId: sticky.agentId, accessToken: await tokenForLabel(sticky.label) };
     } catch (e) {
       log('gagal ambil akun sticky: ' + String((e && e.message) || e).slice(0, 120));

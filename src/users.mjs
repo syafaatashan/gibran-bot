@@ -107,7 +107,9 @@ export async function assignStickyAccount(chatId, opts = {}) {
   }
 
   const used = reservedLabelSet();
-  const start = Math.min(reserveFrom, pool.accounts.length);
+  // Kalau pool lebih kecil dari ambang reservasi, pakai seluruh pool
+  // (jangan gagal total - lebih baik berbagi akun daripada chat mati).
+  const start = reserveFrom < pool.accounts.length ? reserveFrom : 0;
   for (let i = start; i < pool.accounts.length; i++) {
     const acc = pool.accounts[i];
     if (!acc || acc.dead) continue;
