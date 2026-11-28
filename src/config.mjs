@@ -11,6 +11,7 @@ export const CFG = {
   mcodeTimeout: process.env.MCODE_TIMEOUT || '15m',
   mcodeEffort: process.env.MCODE_EFFORT || '',
   accountsFile: process.env.ACCOUNTS_FILE || '/data/accounts.json',
+  accountsSeedFile: process.env.ACCOUNTS_SEED_FILE || '/data/accounts.seed.json',
   accountsJson: process.env.ACCOUNTS_JSON || '',
   skillDir: process.env.BOT_SKILL_DIR || '/app/skill/get-a-job',
   personaFile: process.env.BOT_PERSONA_FILE || '/app/agent/gibran-ai/agent.md',

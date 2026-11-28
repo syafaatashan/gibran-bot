@@ -35,9 +35,13 @@ export function loadChain() {
   let raw = '';
   try { raw = fs.readFileSync(CHAIN_FILE, 'utf8'); } catch { raw = ''; }
   if (!raw) {
+    // urutan: env ACCOUNTS_JSON -> file seed (ACCOUNTS_SEED_FILE) -> chain file
     raw = CFG.accountsJson || '';
+    if (!raw) {
+      try { raw = fs.readFileSync(CFG.accountsSeedFile, 'utf8'); } catch { raw = ''; }
+    }
     if (raw) {
-      try { fs.writeFileSync(CHAIN_FILE, raw); } catch { /* abaikan */ }
+      try { fs.writeFileSync(CHAIN_FILE, raw); log('chain akun di-seed dari sumber baru'); } catch { /* abaikan */ }
     }
   }
   if (!raw) return [];
