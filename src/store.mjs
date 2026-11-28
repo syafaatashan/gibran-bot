@@ -6,6 +6,7 @@ const FILE = path.join(CFG.dataDir, 'state.json');
 
 export const state = {
   tokens: null,
+  accounts: { chain: [], currentIndex: -1, currentLabel: '', lastError: '', rotatedAt: 0 },
   sessions: {},
   updatedAt: 0,
 };
@@ -17,13 +18,13 @@ export function loadStore() {
     if (j && typeof j === 'object') {
       state.tokens = j.tokens || null;
       state.sessions = j.sessions || {};
+      if (j.accounts) state.accounts = Object.assign(state.accounts, j.accounts);
     }
   } catch {
     state.tokens = null;
     state.sessions = {};
   }
-  // Token yang tersimpan harus milik agent yang sama. Kalau agent berganti
-  // (mis. ganti akun bot), token lama dibuang dan di-bootstrap ulang dari env.
+  // Token tersimpan harus milik agent yang sama; kalau agent berganti, token lama dibuang.
   if (state.tokens && state.tokens.agentId && CFG.mm.agentId && state.tokens.agentId !== CFG.mm.agentId) {
     state.tokens = null;
   }
@@ -40,7 +41,7 @@ export function loadStore() {
   }
 }
 
-// Muat otomatis saat modul diimpor, supaya urutan import tidak menjadi sumber bug.
+// Muat otomatis saat modul diimpor agar urutan import tidak jadi sumber bug.
 loadStore();
 
 export function saveStore() {
@@ -48,4 +49,13 @@ export function saveStore() {
   const tmp = FILE + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(state, null, 2), 'utf8');
   fs.renameSync(tmp, FILE);
+}
+
+export function getSession(chatId) {
+  return state.sessions[String(chatId)] || null;
+}
+
+export function setSession(chatId, info) {
+  state.sessions[String(chatId)] = Object.assign({}, state.sessions[String(chatId)], info, { updatedAt: Date.now() });
+  saveStore();
 }

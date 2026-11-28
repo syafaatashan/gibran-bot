@@ -1,8 +1,19 @@
 export const CFG = {
   port: Number(process.env.PORT || 8080),
-  dataDir: process.env.BOT_DATA_DIR || '/data',
+  mode: process.env.BOT_MODE || 'runtime-local',
+  dataDir: process.env.MINIMAX_DATA_DIR || process.env.BOT_DATA_DIR || '/data',
+  workspaceDir: process.env.BOT_WORKSPACE_DIR || '/workspace',
   opsToken: process.env.OPS_TOKEN || '',
-  publicUrl: (process.env.PUBLIC_BASE_URL || '').replace(/\/+$/, ''),
+  mcodeBin: process.env.MCODE_BIN || 'mcode',
+  mcodeModel: process.env.MCODE_MODEL || '',
+  mcodePermission: process.env.MCODE_PERMISSION || 'smart',
+  mcodeMaxSteps: Number(process.env.MCODE_MAX_STEPS || 24),
+  mcodeTimeout: process.env.MCODE_TIMEOUT || '15m',
+  mcodeEffort: process.env.MCODE_EFFORT || '',
+  accountsFile: process.env.ACCOUNTS_FILE || '/data/accounts.json',
+  accountsJson: process.env.ACCOUNTS_JSON || '',
+  timezone: process.env.MINIMAX_TIMEZONE || 'Asia/Makassar',
+  maxAttempts: Number(process.env.BOT_MAX_ATTEMPTS || 3),
   telegram: {
     token: process.env.TELEGRAM_BOT_TOKEN || '',
     webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET || '',
@@ -22,6 +33,4 @@ export const CFG = {
     expiresAtMs: Number(process.env.MM_AUTH_EXPIRES_AT_MS || 0),
     turnTimeoutMs: Number(process.env.MM_TURN_TIMEOUT_MS || 900000),
   },
-  skillDir: process.env.BOT_SKILL_DIR || '/app/skill/get-a-job',
-  personaFile: process.env.BOT_PERSONA_FILE || '/app/agent/gibran-ai/agent.md',
 };

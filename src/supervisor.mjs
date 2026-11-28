@@ -1,0 +1,243 @@
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { CFG } from './config.mjs';
+import { state, saveStore } from './store.mjs';
+import { log } from './log.mjs';
+
+const AUTH_HOME = path.join(CFG.dataDir, 'auth');
+const NS_DIR = path.join(AUTH_HOME, 'prod', 'en', 'mcode-public');
+const SALT = CFG.mm.salt;
+
+function md5(s) {
+  return crypto.createHash('md5').update(s, 'utf8').digest('hex');
+}
+
+// accountId = base64url_nopad(sha256(authHome + NUL + clientId)) -> nilainya per mesin
+export function accountId() {
+  return crypto
+    .createHash('sha256')
+    .update(AUTH_HOME + String.fromCharCode(0) + CFG.mm.clientId)
+    .digest('base64url')
+    .replace(/=+$/, '');
+}
+
+export function recordKey() {
+  return 'com.minimax.mcode.oauth.prod.en' + String.fromCharCode(0) + accountId();
+}
+
+export function loadChain() {
+  let raw = CFG.accountsJson;
+  if (!raw) {
+    try {
+      raw = fs.readFileSync(CFG.accountsFile, 'utf8');
+    } catch {
+      raw = '';
+    }
+  }
+  if (!raw) return [];
+  try {
+    const j = JSON.parse(raw);
+    const list = Array.isArray(j) ? j : j.accounts || [];
+    return list.filter((a) => a && (a.refreshToken || a.accessToken));
+  } catch (e) {
+    log('gagal parse chain akun: ' + String(e.message || e));
+    return [];
+  }
+}
+
+export function chainLabels() {
+  return loadChain().map((a) => a.label || a.email || 'akun');
+}
+
+export function currentAccount() {
+  const chain = loadChain();
+  if (!chain.length) return null;
+  const idx = state.accounts.currentIndex >= 0 ? state.accounts.currentIndex : 0;
+  return chain[Math.min(idx, chain.length - 1)] || null;
+}
+
+export async function refreshOAuth(refreshToken) {
+  const body = new URLSearchParams({
+    client_id: CFG.mm.clientId,
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+    scope: CFG.mm.scope,
+    audience: CFG.mm.audience,
+  });
+  const res = await fetch(CFG.mm.tokenUrl, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'MiniMax Code/3.1.17' },
+    body,
+  });
+  const txt = await res.text();
+  let t = {};
+  try { t = JSON.parse(txt); } catch { /* biarkan */ }
+  if (!res.ok || !t.access_token) {
+    throw new Error('refresh OAuth gagal HTTP ' + res.status + ' ' + txt.slice(0, 160));
+  }
+  return {
+    accessToken: t.access_token,
+    refreshToken: t.refresh_token || refreshToken,
+    expiresAtMs: Date.now() + Number(t.expires_in || 43200) * 1000,
+  };
+}
+
+export function writeAuthStore(cred) {
+  fs.mkdirSync(NS_DIR, { recursive: true });
+  const key = recordKey();
+  fs.writeFileSync(
+    path.join(NS_DIR, 'auth.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      records: {
+        [key]: {
+          schemaVersion: 1,
+          accessToken: cred.accessToken,
+          refreshToken: cred.refreshToken || '',
+          tokenType: 'Bearer',
+          clientId: CFG.mm.clientId,
+          scopes: [CFG.mm.scope],
+          audience: CFG.mm.audience,
+          expiresAtMs: cred.expiresAtMs,
+          generation: Number(cred.generation || 1),
+          loginEpoch: cred.loginEpoch || 'nf-' + Date.now(),
+        },
+      },
+    }, null, 2),
+  );
+  const prev = readJson(path.join(NS_DIR, 'auth-state.json')) || {};
+  fs.writeFileSync(
+    path.join(NS_DIR, 'auth-state.json'),
+    JSON.stringify(Object.assign({}, prev, {
+      schemaVersion: 2,
+      status: 'authenticated',
+      storeKind: 'file',
+      clientId: CFG.mm.clientId,
+      scopes: [CFG.mm.scope],
+      audience: CFG.mm.audience,
+      buildEnv: 'prod',
+      region: 'en',
+      generation: Number(cred.generation || 1),
+      expiresAtMs: cred.expiresAtMs,
+    }), null, 2),
+  );
+}
+
+function readJson(p) {
+  try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
+}
+
+// Pastikan akun aktif punya access token yang valid dan sudah ditulis ke auth store.
+export async function ensureAccount() {
+  const acc = currentAccount();
+  if (!acc) {
+    throw new Error('chain akun kosong (ACCOUNTS_JSON / accounts file belum diisi)');
+  }
+  const expiresAtMs = Number(acc.expiresAtMs || 0);
+  let cred = null;
+  if (acc.accessToken && expiresAtMs - Date.now() > 5 * 60 * 1000) {
+    cred = { accessToken: acc.accessToken, refreshToken: acc.refreshToken, expiresAtMs, generation: acc.generation || 1 };
+  } else if (acc.refreshToken) {
+    log('refresh OAuth untuk akun ' + (acc.label || acc.email));
+    cred = await refreshOAuth(acc.refreshToken);
+    acc.accessToken = cred.accessToken;
+    acc.refreshToken = cred.refreshToken;
+    acc.expiresAtMs = cred.expiresAtMs;
+  } else {
+    throw new Error('akun ' + (acc.label || acc.email) + ' tidak punya token sama sekali');
+  }
+  writeAuthStore(cred);
+  state.accounts.currentLabel = acc.label || acc.email || '';
+  saveStore();
+  return Object.assign({ label: acc.label, agentId: acc.agentId }, cred);
+}
+
+export async function rotate() {
+  const chain = loadChain();
+  if (!chain.length) throw new Error('chain akun kosong');
+  const next = (state.accounts.currentIndex + 1) % chain.length;
+  state.accounts.currentIndex = next;
+  state.accounts.rotatedAt = Date.now();
+  saveStore();
+  const acc = chain[next];
+  let cred;
+  if (acc.refreshToken) {
+    cred = await refreshOAuth(acc.refreshToken);
+    acc.accessToken = cred.accessToken;
+    acc.refreshToken = cred.refreshToken;
+    acc.expiresAtMs = cred.expiresAtMs;
+  } else {
+    cred = { accessToken: acc.accessToken, refreshToken: '', expiresAtMs: Number(acc.expiresAtMs || 0) };
+  }
+  writeAuthStore(cred);
+  state.accounts.currentLabel = acc.label || acc.email || '';
+  saveStore();
+  log('rotasi akun -> ' + state.accounts.currentLabel);
+  return Object.assign({ label: state.accounts.currentLabel, agentId: acc.agentId }, cred);
+}
+
+function cloudHeaders(token, raw) {
+  const ts = String(Math.floor(Date.now() / 1000));
+  return {
+    Authorization: 'Bearer ' + token,
+    'x-timestamp': ts,
+    'x-signature': md5(ts + SALT + (raw || '')),
+    'Accept': 'application/json',
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) Chrome/156.0.0.0 Safari/537.36',
+  };
+}
+
+export async function signinStatus(token) {
+  const url = CFG.mm.base + '/minimax-cloud/api/v1/signin/status?client=desktop&timezone_id=' + encodeURIComponent(CFG.timezone);
+  const res = await fetch(url, { headers: cloudHeaders(token) });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error('signin/status HTTP ' + res.status);
+  const data = j.data || {};
+  const days = Array.isArray(data.days) ? data.days : [];
+  const today = days.find((d) => d.is_today) || null;
+  return { today, claimedToday: !!(today && today.status === 3), days };
+}
+
+export async function claimSignin(token) {
+  const body = '{}';
+  const url = CFG.mm.base + '/minimax-cloud/api/v1/signin/claim?client=desktop&timezone_id=' + encodeURIComponent(CFG.timezone);
+  const res = await fetch(url, { method: 'POST', headers: cloudHeaders(token, body), body });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error('signin/claim HTTP ' + res.status);
+  const data = j.data || {};
+  return { claimResult: Number(data.claim_result || 0), points: Number(data.points || 0), dayNo: data.day_no };
+}
+
+export async function creditSummary(token) {
+  const url = CFG.mm.base + '/minimax-cloud/api/v1/credit/details?client=desktop';
+  const res = await fetch(url, { headers: cloudHeaders(token) });
+  const j = await res.json().catch(() => ({}));
+  const details = Array.isArray(j.details) ? j.details : [];
+  const remaining = details.reduce((sum, d) => sum + Number(d.remaining_amount || 0), 0);
+  const granted = details.reduce((sum, d) => sum + Number(d.granted_amount || 0), 0);
+  return { remaining, granted, entries: details.length };
+}
+
+// Dipanggil saat turn gagal karena kredit habis: coba klaim check-in dulu, lalu rotasi.
+export async function handleCreditExhausted() {
+  const acc = currentAccount();
+  if (acc && acc.accessToken) {
+    try {
+      const st = await signinStatus(acc.accessToken);
+      if (!st.claimedToday) {
+        const claim = await claimSignin(acc.accessToken);
+        log('check-in harian diklaim, claim_result=' + claim.claimResult + ' points=' + claim.points);
+        if (claim.claimResult === 1 || claim.claimResult === 2) {
+          return { action: 'claimed', points: claim.points };
+        }
+      } else {
+        log('check-in hari ini sudah diklaim, kredit tetap habis -> rotasi');
+      }
+    } catch (e) {
+      log('gagal cek check-in: ' + String(e.message || e));
+    }
+  }
+  const rotated = await rotate();
+  return { action: 'rotated', label: rotated.label };
+}

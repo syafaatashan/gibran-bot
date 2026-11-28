@@ -1,5 +1,5 @@
 name: gibran-bot
-description: Gibran.ai - bot Telegram webhook dengan otak MiniMax Code Cloud agent
+description: Gibran.ai - MCode penuh di container Linux + bridge Telegram dengan rotasi akun otomatis
 billing:
   deploymentPlan: nf-compute-20
 vcsData:
@@ -27,7 +27,13 @@ ports:
 runtimeEnvironment:
   NODE_ENV: production
   PORT: '8080'
-  BOT_DATA_DIR: /data
+  BOT_MODE: runtime-local
+  MINIMAX_DATA_DIR: /data
+  BOT_WORKSPACE_DIR: /workspace
   TELEGRAM_WEBHOOK_PATH: /tg/webhook
   PUBLIC_BASE_URL: https://http--gibran-bot--t2lhy99dxnfp.code.run
-  MM_TURN_TIMEOUT_MS: '900000'
+  MCODE_PERMISSION: smart
+  MCODE_MAX_STEPS: '24'
+  MCODE_TIMEOUT: 15m
+  MCODE_EFFORT: high
+  MINIMAX_TIMEZONE: Asia/Makassar
