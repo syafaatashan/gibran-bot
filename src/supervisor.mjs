@@ -108,7 +108,7 @@ export async function refreshOAuth(refreshToken) {
   };
 }
 
-export function writeAuthStore(cred) {
+export function writeAuthStore(cred, label) {
   fs.mkdirSync(NS_DIR, { recursive: true });
   const key = recordKey();
   fs.writeFileSync(
@@ -143,6 +143,7 @@ export function writeAuthStore(cred) {
       audience: CFG.mm.audience,
       buildEnv: 'prod',
       region: 'en',
+      botAccountLabel: label || (prev && prev.botAccountLabel) || '',
       generation: Number(cred.generation || 1),
       expiresAtMs: cred.expiresAtMs,
     }), null, 2),
@@ -151,6 +152,15 @@ export function writeAuthStore(cred) {
 
 function readJson(p) {
   try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { return null; }
+}
+
+function readAuthStoreLabel() {
+  try {
+    const j = JSON.parse(fs.readFileSync(path.join(NS_DIR, 'auth-state.json'), 'utf8'));
+    return j.botAccountLabel || '';
+  } catch {
+    return '';
+  }
 }
 
 function readAuthStoreRecord() {
@@ -173,7 +183,10 @@ export async function ensureAccount() {
   // Auth store selalu memegang token terbaru untuk akun aktif. Jika chain basi
   // (mis. setelah refresh di runtime lain), ambil dari sana lalu selaraskan.
   const storeRec = readAuthStoreRecord();
-  if (storeRec && storeRec.accessToken && Number(storeRec.expiresAtMs || 0) - Date.now() > 5 * 60 * 1000) {
+  const storeLabel = readAuthStoreLabel();
+  const accLabel = acc.label || acc.email || '';
+  const labelMatch = !storeLabel || !accLabel || storeLabel === accLabel;
+  if (labelMatch && storeRec && storeRec.accessToken && Number(storeRec.expiresAtMs || 0) - Date.now() > 5 * 60 * 1000) {
     cred = {
       accessToken: storeRec.accessToken,
       refreshToken: storeRec.refreshToken,
@@ -238,12 +251,51 @@ export async function rotate(targetIndex) {
   } else {
     cred = { accessToken: acc.accessToken, refreshToken: '', expiresAtMs: Number(acc.expiresAtMs || 0) };
   }
-  writeAuthStore(cred);
+  writeAuthStore(cred, acc.label || acc.email || '');
   persistAccount(acc.label || acc.email || '', cred);
   state.accounts.currentLabel = acc.label || acc.email || '';
   saveStore();
   log('rotasi akun -> ' + state.accounts.currentLabel);
   return Object.assign({ label: state.accounts.currentLabel, agentId: acc.agentId }, cred);
+}
+
+// Rotasi tahan: coba akun target, kalau tokennya basi/refresh gagal, coba berikutnya.
+export async function rotateRobust(targetIndex) {
+  const chain = loadChain();
+  if (!chain.length) throw new Error('chain akun kosong');
+  const start = (typeof targetIndex === 'number' && targetIndex >= 0)
+    ? targetIndex % chain.length
+    : (state.accounts.currentIndex + 1) % chain.length;
+  for (let i = 0; i < chain.length; i++) {
+    const idx = (start + i) % chain.length;
+    const acc = chain[idx];
+    if (!eligible(acc)) continue;
+    let cred = null;
+    if (acc.accessToken && Number(acc.expiresAtMs || 0) - Date.now() > 5 * 60 * 1000) {
+      cred = { accessToken: acc.accessToken, refreshToken: acc.refreshToken, expiresAtMs: Number(acc.expiresAtMs) };
+    } else if (acc.refreshToken) {
+      try {
+        cred = await refreshOAuth(acc.refreshToken);
+      } catch (e) {
+        log('refresh gagal untuk ' + (acc.label || acc.email || '') + ': ' + String((e && e.message) || e).slice(0, 110));
+        continue;
+      }
+    } else {
+      continue;
+    }
+    state.accounts.currentIndex = idx;
+    state.accounts.currentLabel = acc.label || acc.email || '';
+    state.accounts.rotatedAt = Date.now();
+    acc.accessToken = cred.accessToken;
+    acc.refreshToken = cred.refreshToken;
+    acc.expiresAtMs = cred.expiresAtMs;
+    saveChain(chain);
+    saveStore();
+    writeAuthStore(cred, state.accounts.currentLabel);
+    log('rotasi akun -> ' + state.accounts.currentLabel);
+    return Object.assign({ label: state.accounts.currentLabel, agentId: acc.agentId }, cred);
+  }
+  throw new Error('tidak ada akun yang bisa dipakai (semua refresh token basi)');
 }
 
 function cloudHeaders(token, raw) {
@@ -320,7 +372,7 @@ export async function handleCreditExhausted() {
   }
   let rotated;
   try {
-    rotated = await rotate();
+    rotated = await rotateRobust();
   } catch (e) {
     log('rotasi gagal: ' + String((e && e.message) || e).slice(0, 160));
     return { action: 'rotate-failed', error: String((e && e.message) || e).slice(0, 200) };

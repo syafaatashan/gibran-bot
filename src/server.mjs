@@ -5,7 +5,7 @@ import { state, saveStore, getSession, setSession } from './store.mjs';
 import { log } from './log.mjs';
 import {
   ensureAccount, handleCreditExhausted, chainLabels, currentAccount,
-  rotate, creditSummary, signinStatus, claimCheckin,
+  rotate, rotateRobust, creditSummary, signinStatus, claimCheckin,
 } from './supervisor.mjs';
 import { runExec } from './mcode.mjs';
 import {
@@ -268,7 +268,7 @@ const server = http.createServer((req, res) => {
       try { body = JSON.parse(raw || '{}'); } catch { /* abaikan */ }
       (async () => {
         try {
-          const r = await rotate(typeof body.index === 'number' ? body.index : undefined);
+          const r = await rotateRobust(typeof body.index === 'number' ? body.index : undefined);
           return send(res, 200, { ok: true, current: r.label, agentId: r.agentId, chain: chainLabels() });
         } catch (e) {
           return send(res, 500, { ok: false, error: String((e && e.message) || e).slice(0, 250) });
