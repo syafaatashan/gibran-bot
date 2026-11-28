@@ -2,8 +2,10 @@
 FROM node:24-bookworm-slim
 
 # better-sqlite3 butuh toolchain + glibc >= 2.29 (bookworm = 2.36).
+# chromium dipakai plugin browser-use bawaan MCode (bukan muse browser).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3 make g++ ca-certificates curl util-linux procps tzdata \
+        chromium fonts-liberation fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/*
 
 # CLI resmi MiniMax Code (npm publik, MIT). Prebuild better-sqlite3 untuk Linux
@@ -18,7 +20,8 @@ ENV NODE_ENV=production \
     PORT=8080 \
     MINIMAX_DATA_DIR=/data \
     BOT_WORKSPACE_DIR=/workspace \
-    TZ=Asia/Makassar
+    TZ=Asia/Makassar \
+    MCODE_BROWSER_HEADLESS=true
 
 WORKDIR /app
 

@@ -124,11 +124,16 @@ skills:
   external:
     enabled: true
 
+browser:
+  chromePath: /usr/bin/chromium
+  headless: true
+
 beta:
   ptc: false
   browserBridge: false
   filePanelBrowser: false
-  browserUseTooling: false
+  browserUseTooling: true
+  browserAgentCursor: false
   mcodeTools: false
 
 subagent:
