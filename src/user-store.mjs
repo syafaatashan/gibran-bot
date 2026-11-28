@@ -27,6 +27,7 @@ export const PROFILE_DEFAULTS = Object.freeze({
   lastAction: '',
   manual: false,
   reservedAccounts: [],
+  viewToken: '',
 });
 
 function clone(v) {
@@ -66,6 +67,7 @@ function normalizeProfile(chatId, raw) {
       j.reservedAccounts.map((x) => String(x)).filter((x) => x),
     ));
   }
+  if (typeof j.viewToken === 'string') out.viewToken = j.viewToken;
   return out;
 }
 

@@ -33,7 +33,7 @@ import {
   getProfile, setMode, patchProfile, assignStickyAccount,
   canApply, markApplied, userContextBlock, exportForOps,
 } from './users.mjs';
-import { listProfiles } from './user-store.mjs';
+import { listProfiles, loadProfile } from './user-store.mjs';
 import { buildSearchPlan } from './linkedin/search.mjs';
 import { buildApplyPlan, buildApplyMessage, shouldStop } from './linkedin/apply.mjs';
 import * as orch from './orchestrator.mjs';
@@ -60,7 +60,13 @@ function chatByToken(token) {
   let list = [];
   try { list = listProfiles() || []; } catch { list = []; }
   for (const p of list) {
-    if (p && p.viewToken && p.viewToken === token) return String(p.chatId);
+    const chatId = String((p && p.chatId) || '');
+    if (!chatId) continue;
+    try {
+      // listProfiles hanya mengembalikan ringkasan, jadi profilnya dibaca penuh.
+      const full = loadProfile(chatId);
+      if (full && full.viewToken && full.viewToken === token) return chatId;
+    } catch { /* abaikan */ }
   }
   return null;
 }
@@ -977,15 +983,18 @@ server.listen(CFG.port, '0.0.0.0', async () => {
   try {
     const info = await getWebhookInfo();
     const allowed = (info && info.allowed_updates) || [];
-    if (!allowed.includes('callback_query')) {
-      if (!CFG.publicUrl) {
+    const expected = CFG.publicUrl ? CFG.publicUrl + CFG.telegram.webhookPath : '';
+    const urlOk = !!expected && String((info && info.url) || '') === expected;
+    if (!allowed.includes('callback_query') || !urlOk) {
+      if (!expected) {
         log('PUBLIC_BASE_URL kosong -> webhook tidak didaftarkan ulang');
       } else {
-        await setWebhook(CFG.publicUrl + CFG.telegram.webhookPath, CFG.telegram.webhookSecret);
-        log('webhook didaftarkan ulang dengan callback_query');
+        await setWebhook(expected, CFG.telegram.webhookSecret);
+        log('webhook didaftarkan ulang (callback_query=' + allowed.includes('callback_query')
+          + ', url_ok=' + urlOk + ') -> ' + expected);
       }
     } else {
-      log('webhook sudah menerima callback_query');
+      log('webhook siap: callback_query aktif dan URL cocok');
     }
   } catch (e) {
     log('gagal cek webhook: ' + String((e && e.message) || e).slice(0, 140));
