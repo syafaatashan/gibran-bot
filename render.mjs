@@ -47,4 +47,25 @@ try {
   console.log('[render] symlink workspace dilewati:', e.message);
 }
 
+// MCP browser native MCode (chrome-devtools-mcp) - tanpa muse browser.
+try {
+  const mcp = {
+    mcpServers: {
+      'chrome-devtools': {
+        type: 'stdio',
+        enabled: true,
+        configured: true,
+        builtin: false,
+        description: 'Kontrol browser Chrome headless (MCP native MiniMax Code)',
+        command: 'chrome-devtools-mcp',
+        args: ['--headless', '--isolated', '--executablePath=/usr/local/bin/chromium-headless'],
+      },
+    },
+  };
+  fs.writeFileSync(path.join(DATA, 'mcp.json'), JSON.stringify(mcp, null, 2));
+  console.log('[render] mcp.json ditulis (chrome-devtools)');
+} catch (e) {
+  console.log('[render] gagal tulis mcp.json:', e.message);
+}
+
 console.log('[render] data dir siap:', DATA);

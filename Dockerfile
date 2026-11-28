@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # CLI resmi MiniMax Code (npm publik, MIT). Prebuild better-sqlite3 untuk Linux
 # diambil oleh verify-native-install.mjs dari npmmirror.
-RUN npm install -g @minimax-ai/code@0.8.0 \
+RUN npm install -g @minimax-ai/code@0.8.0 chrome-devtools-mcp@latest \
         --allow-scripts=@minimax-ai/code,better-sqlite3 \
         --registry=https://registry.npmjs.org/ \
     && npm cache clean --force \
@@ -33,7 +33,12 @@ COPY config.template.yaml ./config.template.yaml
 COPY render.mjs ./render.mjs
 COPY entrypoint.sh /app/entrypoint.sh
 
-RUN chmod +x /app/entrypoint.sh && mkdir -p /data /workspace
+# Wrapper Chromium headless: --disable-quic wajib (UDP 443 di-blackhole egress
+# Northflank -> Chromium hang saat memuat https, sementara curl normal).
+RUN printf '#!/usr/bin/env bash\nexec /usr/bin/chromium --no-sandbox --disable-dev-shm-usage --disable-gpu --disable-quic --disable-features=Translate,BackForwardCache "$@"\n' > /usr/local/bin/chromium-headless \
+    && chmod +x /usr/local/bin/chromium-headless \
+    && chmod +x /app/entrypoint.sh \
+    && mkdir -p /data /workspace
 
 VOLUME ["/data"]
 EXPOSE 8080
