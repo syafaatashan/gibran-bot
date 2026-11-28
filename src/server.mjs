@@ -481,23 +481,39 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && p === '/ops/netcheck') {
     if (!opsOk(req)) return send(res, 401, { ok: false, error: 'token ops salah' });
     return (async () => {
-      const targets = [
-        { name: 'cloud-api', url: CFG.mm.base + '/minimax-cloud/api/v1/agent' },
-        { name: 'oauth', url: CFG.mm.tokenUrl },
-      ];
       const results = [];
-      for (const t of targets) {
+      const probes = [
+        { name: 'cloud-api GET', method: 'GET', url: CFG.mm.base + '/minimax-cloud/api/v1/agent' },
+        { name: 'oauth GET', method: 'GET', url: CFG.mm.tokenUrl },
+        {
+          name: 'oauth POST', method: 'POST', url: CFG.mm.tokenUrl,
+          body: 'grant_type=refresh_token&refresh_token=probe-invalid&client_id=' + encodeURIComponent(CFG.mm.clientId),
+        },
+        {
+          name: 'cloud-api POST', method: 'POST', url: CFG.mm.base + '/minimax-cloud/api/v1/signin/claim',
+          body: '{}', json: true,
+        },
+      ];
+      for (const t of probes) {
         const t0 = Date.now();
         try {
           const res = await fetch(t.url, {
-            method: 'GET',
+            method: t.method,
             signal: AbortSignal.timeout(15000),
-            headers: { 'user-agent': 'gibran-bot-netcheck' },
+            headers: {
+              'user-agent': 'MiniMax Code/3.1.17',
+              ...(t.json ? { 'content-type': 'application/json' } : { 'content-type': 'application/x-www-form-urlencoded' }),
+            },
+            body: t.body,
           });
-          results.push({ name: t.name, host: new URL(t.url).host, status: res.status, ms: Date.now() - t0 });
+          const txt = await res.text().catch(() => '');
+          results.push({
+            name: t.name, host: new URL(t.url).host, method: t.method,
+            status: res.status, ms: Date.now() - t0, snippet: txt.slice(0, 90),
+          });
         } catch (e) {
           results.push({
-            name: t.name, host: new URL(t.url).host,
+            name: t.name, host: new URL(t.url).host, method: t.method,
             error: String((e && e.message) || e).slice(0, 160), ms: Date.now() - t0,
           });
         }
