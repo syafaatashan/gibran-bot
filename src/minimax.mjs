@@ -12,6 +12,13 @@ export const cloud = new MiniMaxCloud({
   base: CFG.mm.base,
   salt: CFG.mm.salt,
   timezone: CFG.timezone,
+  // Fallback token untuk panggilan tanpa token eksplisit. Import dinamis dipakai
+  // supaya modul ini tetap bebas siklus import dengan supervisor.
+  getAccessToken: async () => {
+    const sup = await import('./supervisor.mjs');
+    const acc = await sup.ensureAccount();
+    return acc.accessToken;
+  },
   log: (m) => console.log(String(m)),
 });
 
