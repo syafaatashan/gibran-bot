@@ -5,7 +5,7 @@ import { state, saveStore, getSession, setSession } from './store.mjs';
 import { log } from './log.mjs';
 import {
   ensureAccount, handleCreditExhausted, chainLabels, currentAccount,
-  rotate, rotateRobust, creditSummary, signinStatus, claimCheckin,
+  rotate, rotateRobust, creditSummary, signinStatus, claimCheckin, importChainFromEnv,
 } from './supervisor.mjs';
 import { runExec } from './mcode.mjs';
 import {
@@ -246,6 +246,12 @@ const server = http.createServer((req, res) => {
       lastError,
       updatedAt: state.updatedAt,
     });
+  }
+
+  if (req.method === 'POST' && p === '/ops/chain') {
+    if (!opsOk(req)) return send(res, 401, { ok: false, error: 'token ops salah' });
+    const n = importChainFromEnv();
+    return send(res, 200, { ok: true, imported: n, chain: chainLabels() });
   }
 
   if (req.method === 'GET' && p === '/ops/accounts') {

@@ -51,6 +51,22 @@ export function loadChain() {
   }
 }
 
+// Ganti chain di volume dengan isi env (dipakai untuk pembaruan massal tanpa rebuild).
+export function importChainFromEnv() {
+  if (!CFG.accountsJson) return 0;
+  try {
+    const j = JSON.parse(CFG.accountsJson);
+    const list = Array.isArray(j) ? j : j.accounts || [];
+    saveChain(list);
+    state.accounts.currentIndex = -1;
+    saveStore();
+    return list.length;
+  } catch (e) {
+    log('gagal import chain dari env: ' + String(e.message || e).slice(0, 140));
+    return 0;
+  }
+}
+
 export function saveChain(chain) {
   try {
     fs.writeFileSync(CHAIN_FILE, JSON.stringify({ generatedAtMs: Date.now(), accounts: chain }, null, 2));
