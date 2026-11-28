@@ -172,7 +172,7 @@ async function handleCloudAgent(msg) {
     let reply = '';
     try {
       const token = await tokenForLabel(label);
-      const out = await cloudPost(sid, content, { token, sender: { agent_name: label } });
+      const out = await cloudPost(sid, content, { token, sender: { agent_name: await agentIdForLabel(label) } });
       reply = (out && out.text) || '';
     } catch (e) {
       const kind = e && e.kind;
@@ -185,7 +185,7 @@ async function handleCloudAgent(msg) {
         if (act.action === 'claimed') {
           try {
             const token = await tokenForLabel(label);
-            const out = await cloudPost(sid, content, { token, sender: { agent_name: label } });
+            const out = await cloudPost(sid, content, { token, sender: { agent_name: await agentIdForLabel(label) } });
             reply = (out && out.text) || '';
           } catch { /* tetap lanjut ke rotasi */ }
         }
