@@ -54,27 +54,45 @@ async function handleRuntimeLocal(msg) {
   }
   busy.set(key, true);
   const stopTyping = await keepTyping(chatId);
+  let placeholderId = null;
+  let progress = '';
+  let lastEdit = 0;
+  const onEvent = (ev) => {
+    if (!ev || ev.type !== 'item.updated') return;
+    if (!ev.item || ev.item.type !== 'agent_message') return;
+    if (typeof ev.item.contentDelta !== 'string') return;
+    progress += ev.item.contentDelta;
+    const now = Date.now();
+    if (now - lastEdit < 1500) return;
+    lastEdit = now;
+    if (placeholderId) editMessageText(chatId, placeholderId, progress).catch(() => {});
+  };
   try {
     await ensureAccount();
     const cwd = workspaceFor(chatId);
     const prev = getSession(key);
+    const sent = await sendMessage(chatId, '⏳ Sedang bekerja...');
+    placeholderId = sent[0] || null;
     let result = null;
     for (let attempt = 1; attempt <= CFG.maxAttempts; attempt++) {
       result = await runExec({
         cwd,
         sessionId: prev ? prev.sessionId : null,
         prompt: text,
+        onEvent,
       });
       if (!result.creditError && !result.authError) break;
       if (result.creditError) {
         log('turn gagal karena kredit (percobaan ' + attempt + ')');
         const act = await handleCreditExhausted();
         log('supervisor: ' + act.action + (act.label ? ' -> ' + act.label : ''));
+        progress = '';
         continue;
       }
       if (result.authError) {
         log('token ditolak, refresh ulang');
         await ensureAccount();
+        progress = '';
         continue;
       }
     }
@@ -86,7 +104,8 @@ async function handleRuntimeLocal(msg) {
       await sendMessage(chatId, '⚠️ Saya belum berhasil menyelesaikan itu. Coba ulangi sebentar lagi ya.');
       return;
     }
-    await sendMessage(chatId, result.text);
+    const done = placeholderId ? await editMessageText(chatId, placeholderId, result.text) : false;
+    if (!done) await sendMessage(chatId, result.text);
     log('chat ' + key + ' selesai (' + Math.round(result.durationMs / 1000) + ' dtk, ' + result.text.length + ' karakter)');
   } catch (e) {
     lastError.message = String((e && e.message) || e).slice(0, 400);

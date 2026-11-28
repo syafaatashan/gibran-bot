@@ -48,8 +48,9 @@ export async function sendMessage(chatId, text, extra) {
 export async function editMessageText(chatId, messageId, text) {
   try {
     await call('editMessageText', { chat_id: chatId, message_id: messageId, text: String(text).slice(0, CFG.telegram.maxChars) });
+    return true;
   } catch (e) {
-    // editMessageText gagal kalau pesan tidak berubah - abaikan.
+    return false;
   }
 }
 

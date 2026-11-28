@@ -88,17 +88,36 @@ export async function runExec(opts) {
     });
   });
 
-  let last = null;
-  for (const ev of res.events) {
-    if (ev && ev.type === 'exec.result') last = ev;
-  }
+  // Format stream-json nyata: satu JSON per baris.
+  //   exec.started | session.started | turn.started
+  //   item.started/item.updated  -> item.contentDelta (stream)
+  //   item.completed             -> item.content (teks final)
+  //   turn.completed | exec.completed -> result{ sessionId, status, output }
+  let sessionId = null;
   let text = '';
-  try {
-    text = fs.readFileSync(lastMessageFile, 'utf8').trim();
-  } catch { /* tidak ada */ }
-  if (!text && last && typeof last.output === 'string') text = last.output.trim();
-  if (!text && last && last.output && typeof last.output === 'object') {
-    text = String(last.output.text || last.output.content || '').trim();
+  let streamed = '';
+  let last = null;
+  let execError = null;
+  for (const ev of res.events) {
+    if (!ev || typeof ev !== 'object') continue;
+    if (ev.sessionId && !sessionId) sessionId = ev.sessionId;
+    if (ev.type === 'item.updated' && ev.item && ev.item.type === 'agent_message' && typeof ev.item.contentDelta === 'string') {
+      streamed += ev.item.contentDelta;
+    }
+    if (ev.type === 'item.completed' && ev.item && ev.item.type === 'agent_message' && typeof ev.item.content === 'string') {
+      text = ev.item.content;
+    }
+    if (ev.type === 'exec.completed' && ev.result) {
+      last = ev.result;
+      sessionId = ev.result.sessionId || sessionId;
+      if (!text && typeof ev.result.output === 'string') text = ev.result.output;
+      if (ev.result.error) execError = ev.result.error;
+    }
+  }
+  if (!text) {
+    try {
+      text = fs.readFileSync(lastMessageFile, 'utf8').trim();
+    } catch { /* tidak ada */ }
   }
   try { fs.unlinkSync(lastMessageFile); } catch { /* abaikan */ }
 
@@ -107,9 +126,10 @@ export async function runExec(opts) {
     ok: res.code === 0 && !isCreditError(combined),
     code: res.code,
     text,
-    sessionId: (last && last.sessionId) || null,
+    streamed,
+    sessionId: sessionId || null,
     status: (last && last.status) || null,
-    error: (last && last.error) || null,
+    error: execError || (last && last.error) || null,
     creditError: isCreditError(combined),
     authError: isAuthError(combined),
     stderr: res.stderr.slice(-2000),
