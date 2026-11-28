@@ -218,7 +218,9 @@ const server = http.createServer((req, res) => {
       } else {
         out.mcode = true;
       }
-      out.ok = out.cloud && out.telegram && out.mcode;
+      // Mode runtime-local tidak memakai endpoint cloud-agent, jadi check cloud
+      // hanya informatif di mode itu (token LLM sudah divalidasi oleh turn nyata).
+      out.ok = out.telegram && out.mcode && (out.cloud || CFG.mode === 'runtime-local');
       return send(res, out.ok ? 200 : 503, out);
     })();
   }
