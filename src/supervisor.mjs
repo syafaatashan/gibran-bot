@@ -48,6 +48,13 @@ export const pool = new AccountPool({
 seedChainFile();
 try {
   pool.load();
+  // Restart container harus melanjutkan rotasi dari posisi tersimpan, bukan
+  // kembali ke akun pertama (kalau tidak, akun yang sama terus dipakai).
+  const savedIdx = Number(state.accounts.currentIndex);
+  if (Number.isFinite(savedIdx) && savedIdx >= 0 && savedIdx < pool.size()) {
+    pool.currentIndex = savedIdx;
+    log('rotasi dilanjutkan dari index ' + savedIdx + ' (' + state.accounts.currentLabel + ')');
+  }
 } catch (e) {
   log('chain akun belum ada: ' + String(e.message || e).slice(0, 120));
 }
