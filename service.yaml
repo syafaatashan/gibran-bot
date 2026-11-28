@@ -29,5 +29,5 @@ runtimeEnvironment:
   PORT: '8080'
   BOT_DATA_DIR: /data
   TELEGRAM_WEBHOOK_PATH: /tg/webhook
-  PUBLIC_BASE_URL: https://lb.686e8db5561d701a95e205d8.northflank.com
+  PUBLIC_BASE_URL: https://http--gibran-bot--t2lhy99dxnfp.code.run
   MM_TURN_TIMEOUT_MS: '900000'
