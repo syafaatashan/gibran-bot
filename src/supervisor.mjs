@@ -109,6 +109,7 @@ export async function ensureAccount() {
         continue;
       }
     }
+    if (pool.currentIndex < 0) pool.currentIndex = pool.accounts.indexOf(acc);
     state.accounts.currentIndex = pool.currentIndex >= 0 ? pool.currentIndex : 0;
     state.accounts.currentLabel = label;
     saveStore();
