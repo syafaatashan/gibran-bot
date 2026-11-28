@@ -91,8 +91,14 @@ async function handleRuntimeLocal(msg) {
         continue;
       }
       if (result.authError) {
-        log('token ditolak, refresh ulang');
-        await ensureAccount();
+        log('token ditolak -> rotasi ke akun lain');
+        try {
+          const r = await rotateRobust();
+          log('rotasi setelah auth error -> ' + r.label);
+        } catch (e) {
+          log('rotasi gagal: ' + String((e && e.message) || e).slice(0, 140));
+          await ensureAccount();
+        }
         progress = '';
         continue;
       }
